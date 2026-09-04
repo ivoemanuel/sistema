@@ -1,0 +1,10 @@
+# Ignorar arquivos de registros gerados no plantão
+registros/
+explicacoes/
+
+# Ignorar os "bancos de dados" em texto plano
+artigos/artigos.txt
+diagnosticos/diagnosticos.txt
+pendencias.txt
+*.tmp
+*.log
