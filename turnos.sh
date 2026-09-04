@@ -33,7 +33,7 @@ selecionar_menu() {
 
         for i in "${!OPCOES[@]}"; do
             if [[ $i -eq $SELECIONADO ]]; then
-                echo "❯ ${OPCOES[$i]}"
+                echo "🐧 ${OPCOES[$i]}"
             else
                 echo "  ${OPCOES[$i]}"
             fi
@@ -218,6 +218,21 @@ registrar_atividade() {
 
     read -rp "Pressione ENTER para voltar..."
 
+}
+
+registrar_atividade() {
+    while true; do
+        clear
+
+        OPCOES=(
+            "Rotina"
+            "Alterações críticas"
+            "Artigo"
+            "Explicação"
+            "Problema"
+            "Observação"
+            "Voltar"
+        )
 }
 
 # ==========================================
