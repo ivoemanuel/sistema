@@ -4,7 +4,7 @@
 # CONFIGURAÇÕES
 # ==========================================
 
-RAIZ="/opt/turnos"
+RAIZ="/opt/sisteminha"
 
 PASTA="$RAIZ/registros"
 ARTIGOS="$RAIZ/artigos/artigos.txt"
@@ -13,10 +13,66 @@ DIAGNOSTICOS="$RAIZ/diagnosticos/diagnosticos.txt"
 AFAZERES="$RAIZ/afazeres/afazers.txt"
 
 USUARIO=$(whoami)
-DATA=$(date '+%Y-%m-%d')
+DATA=$(date '+%d-%m-%Y')
 HORA=$(date '+%H:%M')
 
 ARQUIVO="$PASTA/$DATA.txt"
+
+# ==========================================
+# SELECIONAR
+# ==========================================
+
+selecionar_menu() {
+
+    local OPCOES=("$@")
+    local SELECIONADO=0
+    local TECLA
+
+    while true; do
+        clear
+
+        for i in "${!OPCOES[@]}"; do
+            if [[ $i -eq $SELECIONADO ]]; then
+                echo "❯ ${OPCOES[$i]}"
+            else
+                echo "  ${OPCOES[$i]}"
+            fi
+        done
+
+        echo
+        echo "↑ ↓ navegar | ENTER selecionar"
+
+        IFS= read -rsn1 TECLA
+
+        if [[ "$TECLA" == $'\x1b' ]]; then
+
+            read -rsn2 TECLA
+
+            case "$TECLA" in
+                "[A")
+                    ((SELECIONADO--))
+                    ;;
+                "[B")
+                    ((SELECIONADO++))
+                    ;;
+            esac
+
+        elif [[ "$TECLA" == "" ]]; then
+            break
+        fi
+
+        if (( SELECIONADO < 0 )); then
+            SELECIONADO=$((${#OPCOES[@]} - 1))
+        fi
+
+        if (( SELECIONADO >= ${#OPCOES[@]} )); then
+            SELECIONADO=0
+        fi
+    done
+
+    return "$SELECIONADO"
+}
+
 
 # ==========================================
 # VERIFICAR E CRIAR ESTRUTURA
@@ -34,11 +90,13 @@ verificar_estrutura() {
     sudo touch "$ARTIGOS"
     sudo touch "$AFAZERES"
     sudo touch "$DIAGNOSTICOS"
+    sudo touch "$FEEDBACK"
     
     # Garantir permissão de leitura/escrita para o arquivo
     sudo chmod 664 "$ARTIGOS"
     sudo chmod 664 "$AFAZEREs"
     sudo chmod 664 "$DIAGNOSTICOS"
+    sudo chmod 664 "$FEEDBACK"
 } 
 
 # ==========================================
@@ -143,7 +201,16 @@ registrar_atividade() {
     fi
 
     HORA=$(date '+%H:%M')
-    echo "[$HORA] | $CATEGORIA | $ATIVIDADE" >> "$ARQUIVO"
+
+    read -p "Deseja incluir no feedback? [s/N]:" FEEDBACK
+
+    if [[ "$FEEDBACK" =~ ^[sS]$ ]]; then
+        MARCADOR="S"
+    else
+        MARCADOR="N"
+    fi
+
+    echo "[$HORA] | $CATEGORIA | $MARCADOR | $ATIVIDADE" >> "$ARQUIVO"
 
     echo
     echo "Atividade registrada com sucesso!"
@@ -326,27 +393,22 @@ pesquisar_artigo(){
 menu_artigos() {
     while true; do
         clear
-        echo
-        echo "========== ARTIGOS =========="
-        echo
-        echo "1 - Adicionar artigo"
-        echo "2 - Listar artigos"
-        echo "3 - Buscar artigo"
-        echo "v - Voltar"
-        echo
+        
+        OPCOES=(
+            "Adicionar artigo"
+            "Listar artigos"
+            "Buscar artigo"
+            "Voltar"
+        )
 
-        read -rp "Escolha uma opção: " OPCAO
+        selecionar_menu "${OPCOES[@]}" 
+        OPCAO=$?
 
         case $OPCAO in
-            1) adicionar_artigo ;;
-            2) listar_artigos ;;
-            3) pesquisar_artigo ;;
-            
-            [vV]) break ;;
-
-            *)
-                echo "Opção inválida."
-                ;;
+            0) adicionar_artigo ;;
+            1) listar_artigos ;;
+            2) pesquisar_artigo ;;
+            3) break;;
         esac
     done
 }
@@ -884,6 +946,115 @@ menu_logs(){
     done
 }
 
+
+# ==========================================
+# FEEDBACK
+# ==========================================
+
+gerar_feedback() {
+    echo
+    echo "========== FEEDBACK =========="
+    echo
+
+    if [[ ! -f "$ARQUIVO" ]]; then
+        echo "Não existe registro para hoje."
+        return
+    fi
+
+    FEEDBACK="/opt/turnos/feedback.txt"
+
+    {
+        echo "Boa noite, pessoal! Segue o feedback do dia de hoje: ($DATA)"
+        echo
+
+        grep '| S |' "$ARQUIVO" | while IFS='|' read -r HORA CATEGORIA MARCADOR ATIVIDADE; do
+            ATIVIDADE=$(echo "$ATIVIDADE" | sed 's/^ *//')
+            echo "- $ATIVIDADE"
+        done
+
+        echo
+        echo "Bom descanso a todos, até amanhã!"
+    } > "$FEEDBACK"
+
+    while true; do
+
+        clear
+
+        echo "========== FEEDBACK =========="
+        echo
+        cat "$FEEDBACK"
+        echo
+
+        read -p "Deseja adicionar algo ao feedback? [s/N]: " ADICIONAR
+
+        if [[ "$ADICIONAR" =~ ^[Ss]$ ]]; then
+            clear
+            echo
+            echo "Digite o que deseja adicionar."
+            echo "Digite FIM em uma linha separada quando terminar."
+            echo
+
+            ADICIONAL=""
+
+            while true; do
+                read -r LINHA
+
+                if [[ "$LINHA" == "FIM" ]]; then
+                    break
+                fi
+
+                ADICIONAL+="$LINHA"$'\n'
+            done
+
+            if [[ -n "${ADICIONAL//[$'\n\r ']/}" ]]; then
+
+                TEMP=$(mktemp)
+
+                # Remove a frase final e a linha vazia anterior
+                sed '$d' "$FEEDBACK" | sed '$d' > "$TEMP"
+
+                # Adiciona cada linha como um novo item
+                while IFS= read -r LINHA; do
+                    if [[ -n "${LINHA//[$'\r ']/}" ]]; then
+                        echo "- $LINHA" >> "$TEMP"
+                    fi
+                done <<< "$ADICIONAL"
+
+                # Adiciona novamente a frase final
+                echo >> "$TEMP"
+                echo "Bom descanso a todos!" >> "$TEMP"
+
+                mv "$TEMP" "$FEEDBACK"
+            fi
+
+            continue
+        fi
+
+        break
+    done
+
+    clear
+
+    echo "========== FEEDBACK $DATA =========="
+    echo
+    cat "$FEEDBACK"
+
+    echo
+    read -p "Pressione ENTER para voltar ao menu..."
+}               
+
+editar_feedback() {
+    FEEDBACK="/opt/turnos/feedback.txt"
+
+    if [[ ! -f "$FEEDBACK" ]]; then
+        echo
+        echo "Ainda não existe um feedback para editar."
+        read -p "Pressione ENTER para voltar..."
+        return
+    fi
+
+    nano "$FEEDBACK"
+}
 # ==========================================
 # MENU PRINCIPAL
 # ==========================================
@@ -893,55 +1064,33 @@ criar_registro
 
 while true; do
 
-    clear
+    OPCOES=(
+        "Ver último turno"
+        "Registrar atividade"
+        "Ver registro de hoje"
+        "Ver histórico"
+        "Artigos"
+        "Estudos"
+        "Logs"
+        "Gerar feedback"
+        "Editar feedback"
+        "Sair"
+    )
 
-    echo "========================================"
-    echo "           SISTEMA DE TAREFAS"
-    echo "========================================"
-    echo
-    echo "Data:    $DATA"
-    echo "Usuário: $USUARIO"
-    echo
-    echo "1 - Ver último turno"
-    echo "2 - Ver registro de hoje"
-    echo "3 - Ver histórico"
-    echo "4 - Registrar atividade"
-    echo "5 - Artigos"
-    echo "6 - Explicações"
-    echo "7 - Problemas"
-    echo "8 - Logs"
-    echo "9 - Afazeres"
-    echo "s - Sair"
-    echo
-    echo "========================================"
-
-    read -rp "Escolha uma opção: " OPCAO
-
+    selecionar_menu "${OPCOES[@]}"
+    OPCAO=$?
 
     case $OPCAO in
-
-        1) mostrar_ultimo_turno ;;
+        0) mostrar_ultimo_turno ;;
+        1) registrar_atividade ;;
         2) mostrar_hoje ;;
         3) mostrar_historico ;;
-        4) registrar_atividade ;;
-        5) menu_artigos ;;
-        6) menu_explicacao ;;
-        7) menu_diagnosticos ;;
-        8) menu_logs ;;
-        9) menu_afazeres ;;
-
-        [sS])
-            clear
-            echo "Até logo $USUARIO!"
-            exit 0
-            ;;
-
-        *)
-            echo
-            echo "Opção inválida!"
-            sleep 2
-            ;;
-
+        4) menu_artigos ;;
+        5) menu_estudos ;;
+        6) menu_logs ;;
+        7) gerar_feedback ;;
+        8) editar_feedback ;;
+        9) exit 0 ;;
     esac
 
 done
