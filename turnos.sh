@@ -23,7 +23,8 @@ ARQUIVO="$PASTA/$DATA.txt"
 # ==========================================
 
 selecionar_menu() {
-
+    local COR_DESTAQUE="\e[44;97;1m" 
+    local RESET="\e[0m"
     local OPCOES=("$@")
     local SELECIONADO=0
     local TECLA
@@ -33,7 +34,7 @@ selecionar_menu() {
 
         for i in "${!OPCOES[@]}"; do
             if [[ $i -eq $SELECIONADO ]]; then
-                echo "🐧 ${OPCOES[$i]}"
+                echo -e "${COR_DESTAQUE} 🐧 ${OPCOES[$i]} ${RESET}"
             else
                 echo "  ${OPCOES[$i]}"
             fi
@@ -57,7 +58,7 @@ selecionar_menu() {
                     ;;
             esac
 
-        elif [[ "$TECLA" == "" ]]; then
+        elif [[ -z "$TECLA" ]]; then
             break
         fi
 
@@ -105,7 +106,7 @@ verificar_estrutura() {
 
 criar_registro() {
 
-    DATA=$(date '+%Y-%m-%d')
+    DATA=$(date '+%d-%m-%Y')
     HORA=$(date '+%H:%M')
 
     if [ ! -f "$ARQUIVO" ]; then
@@ -459,7 +460,7 @@ nova_explicacao(){
     ARQUIVO_EXPLICACAO="$EXPLICACAO/${DATA}-${NOME}.txt"
 
     {
-        DATA=$(date '+%Y-%m-%d')
+        DATA=$(date '+%d-%m-%Y')
         echo "========================================="
         echo "               EXPLICAÇÕES"
         echo "========================================="
@@ -682,7 +683,7 @@ add_diagnostico(){
     fi
     
     {
-        DATA=$(date '+%Y-%m-%d')
+        DATA=$(date '+%d-%m-%Y')
         echo "================" 
         echo "Data: $DATA"
         echo "Título: $TITULO"
@@ -1051,6 +1052,185 @@ editar_feedback() {
 
     nano "$FEEDBACK"
 }
+# ==========================================
+# AFAZERES
+# ==========================================
+
+add_tarefa() {
+    clear
+    echo "========================================"
+    echo "            ADICIONAR TAREFA"
+    echo "========================================"
+    echo
+
+    read -rp "Breve descrição da tarefa: " DESCRICAO
+
+    if [[ -z "$DESCRICAO" ]]; then
+        echo
+        echo "A descrição não pode estar vazia"
+        sleep 1.5
+        return
+    fi
+
+    if [[ ! -s "$AFAZERES" ]]; then
+        ID=1
+    else
+        ID=$(awk -F'|' 'NF >= 1 {print $1}' "$AFAZERES" | sort -n | tail -n 1)
+        ID=$((ID + 1))
+    fi
+
+    echo "$ID|ABERTA|$DESCRICAO" | sudo tee -a "$AFAZERES" > /dev/null
+
+    echo
+    echo "Tarefa adicionada com sucesso!"
+    sleep 2
+}
+
+ls_tarefas() {
+    clear
+    echo "========================================"
+    echo "            LISTA DE TAREFAS"
+    echo "========================================"
+    echo
+
+    if [[ ! -s "$AFAZERES" ]]; then
+        echo
+        echo "Nenhuma tarefa cadastrada"
+        echo
+        read -rp "Pressione ENTER para voltar..."
+        return
+    fi
+
+    awk -F'|' '{
+        if ($2 == "ABERTA") {
+            printf "[%02d] [ ] %s\n", $1, $3
+        } else {
+            printf "[%02d] [X] %s\n", $1, $3
+        } 
+    }' "$AFAZERES"
+
+    echo
+    echo "========================================"
+    read -rp "Pressione ENTER para voltar..."
+}
+
+concluir_tarefa() {
+    clear
+    echo "========================================="
+    echo "             CONCLUIR TAREFA"
+    echo "========================================="
+    echo
+
+    if [[ ! -s "$AFAZERES" ]]; then
+        echo
+        echo "Nenhuma tarefa cadstrada"
+        echo
+        read -p "Pressione ENTER para voltar..."
+        return
+    fi
+    
+    awk -F '|' '{
+        if ($2 == "ABERTA") {
+            printf "[%02d] [ ] %s\n", $1, $3
+        } else {
+            printf "[%02d] [X] %s\n", $1, $3
+        }
+    }' "$AFAZERES"
+    
+    echo
+    read -rp "Digite o número da tarefa que deseja concluir: " ESCOLHA
+    
+    if ! [[ "$ESCOLHA" =~ ^[0-9]+$ ]]; then
+        echo
+        echo "Número inválido"
+        read -rp "Pressione ENTER para voltar..."
+        return
+    fi
+    
+    sudo awk -F'|' -v id="$ESCOLHA" 'BEGIN {OFS="|"} { 
+        if ($1 == id) $2 = "CONCLUIDA"; print $0 
+    }' "$AFAZERES" | sudo tee "$AFAZERES.tmp" > /dev/null
+    
+    sudo mv "$AFAZERES.tmp" "$AFAZERES"
+    sudo chmod 644 "$AFAZERES"
+
+    echo
+    echo "Tarefe atualizada!"
+    sleep 1.5
+}
+
+rm_tarefa() {
+    clear
+    echo "========================================"
+    echo "             REMOVER TAREFA"
+    echo "========================================"
+    echo
+
+    if ! [[ -s "$AFAZERES" ]]; then
+        echo
+        echo "Nenhuma tarefa cadastrada"
+        echo
+        read -rp "Pressione ENTER para voltar..."
+        return
+    fi
+
+    awk -F '|' '{
+        if ($2 == "ABERTA") {
+            printf "[%02d] [ ] %s\n", $1, $3
+        } else {
+            printf "[%02d] [X] %s\n", $1, $3
+        }
+    }' "$AFAZERES"
+    
+    echo
+    read -rp "Digite o número da tarefa que deseja remover: " ESCOLHA
+
+    if ! [[ "$ESCOLHA" =~ ^[0-9]+$ ]]; then
+        echo
+        echo "Número inválido"
+        read -rp "Pressione ENTER para voltar..."
+        return
+    fi
+
+    sudo awk -F '|' -v id="$ESCOLHA" '$1 != id {print $0}' "$AFAZERES" | sudo tee "$AFAZERES.tmp" > /dev/null
+    sudo mv "$AFAZERES.tmp" "$AFAZERES"
+    sudo chmod 664 "$AFAZERES"
+
+    echo
+    echo "Tarefa removida com sucesso!"
+    sleep 2
+}
+
+menu_afazeres(){
+    while true; do
+        clear
+        echo "========== TAREFAS =========="
+        echo
+        echo "1 - Adicionar tarefa"
+        echo "2 - Listar tarefas"
+        echo "3 - Concluir tarefa"
+        echo "4 - Remover tarefa"
+        echo "v - Voltar"
+        echo
+
+        read -rp "Escolha uma opção: " OPCAO
+
+        case "$OPCAO" in
+            1) add_tarefa ;;
+            2) ls_tarefas ;;
+            3) concluir_tarefa ;;
+            4) rm_tarefa ;;
+            
+            [vV]) break ;;
+
+            *)
+                echo
+                echo "Opção inválida!"
+                sleep 2 ;;
+        esac
+    done
+}
+
 # ==========================================
 # MENU PRINCIPAL
 # ==========================================
