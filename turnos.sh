@@ -4,7 +4,7 @@
 # CONFIGURAÇÕES
 # ==========================================
 
-RAIZ="/opt/sisteminha"
+RAIZ="/opt/sistema"
 
 PASTA="$RAIZ/registros"
 ARTIGOS="$RAIZ/artigos/artigos.txt"
@@ -105,7 +105,7 @@ verificar_estrutura() {
 
 criar_registro() {
 
-    DATA=$(date '+%Y-%m-%d')
+    DATA=$(date '+%d-%m-%Y')
     HORA=$(date '+%H:%M')
 
     if [ ! -f "$ARQUIVO" ]; then
@@ -218,23 +218,6 @@ registrar_atividade() {
 
     read -rp "Pressione ENTER para voltar..."
 
-}
-
-registrar_atividade() {
-    while true; do
-        clear
-
-        OPCOES=(
-            "Rotina"
-            "Alterações críticas"
-            "Artigo"
-            "Explicação"
-            "Problema"
-            "Observação"
-            "Voltar"
-        )
-
-        selecionar_menu "${OPCOES[@]}"
 }
 
 # ==========================================
@@ -476,7 +459,7 @@ nova_explicacao(){
     ARQUIVO_EXPLICACAO="$EXPLICACAO/${DATA}-${NOME}.txt"
 
     {
-        DATA=$(date '+%Y-%m-%d')
+        DATA=$(date '+%d-%m-%Y')
         echo "========================================="
         echo "               EXPLICAÇÕES"
         echo "========================================="
@@ -703,7 +686,7 @@ add_diagnostico(){
     fi
     
     {
-        DATA=$(date '+%Y-%m-%d')
+        DATA=$(date '+%d-%m-%Y')
         echo "================" 
         echo "Data: $DATA"
         echo "Título: $TITULO"
