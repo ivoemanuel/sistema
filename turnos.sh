@@ -1019,7 +1019,7 @@ gerar_feedback() {
 
                 # Adiciona novamente a frase final
                 echo >> "$TEMP"
-                echo "Bom descanso a todos!" >> "$TEMP"
+                echo "Bom descanso a todos! 🧬" >> "$TEMP"
 
                 mv "$TEMP" "$FEEDBACK"
             fi
@@ -1201,32 +1201,29 @@ rm_tarefa() {
     sleep 2
 }
 
+
 menu_afazeres(){
     while true; do
-        clear
-        echo "========== TAREFAS =========="
-        echo
-        echo "1 - Adicionar tarefa"
-        echo "2 - Listar tarefas"
-        echo "3 - Concluir tarefa"
-        echo "4 - Remover tarefa"
-        echo "v - Voltar"
-        echo
+    
+    OPCOES=(
+        "Adicionar tarefa"
+        "Listar tarefas"
+        "Concluir tarefa"
+        "Remover tarefa"
+        "Voltar"
+    )
 
-        read -rp "Escolha uma opção: " OPCAO
-
+    selecionar_menu "${OPCOES[@]}"
+    OPCAO=$?
+    
         case "$OPCAO" in
-            1) add_tarefa ;;
-            2) ls_tarefas ;;
-            3) concluir_tarefa ;;
-            4) rm_tarefa ;;
-            
-            [vV]) break ;;
-
-            *)
-                echo
-                echo "Opção inválida!"
-                sleep 2 ;;
+        
+            0) add_tarefa ;;
+            1) ls_tarefas ;;
+            2) concluir_tarefa ;;
+            3) rm_tarefa ;;
+            4) break ;;
+    
         esac
     done
 }
@@ -1250,6 +1247,7 @@ while true; do
         "Logs"
         "Gerar feedback"
         "Editar feedback"
+        "Tarefas"
         "Sair"
     )
 
@@ -1266,7 +1264,8 @@ while true; do
         6) menu_logs ;;
         7) gerar_feedback ;;
         8) editar_feedback ;;
-        9) clear ; exit 0 ;;
+        9) menu_afazeres;;
+        10) clear ; exit 0 ;;
     esac
 
 done
