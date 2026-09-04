@@ -233,6 +233,8 @@ registrar_atividade() {
             "Observação"
             "Voltar"
         )
+
+        selecionar_menu "${OPCOES[@]}"
 }
 
 # ==========================================
