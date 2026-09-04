@@ -1266,7 +1266,7 @@ while true; do
         6) menu_logs ;;
         7) gerar_feedback ;;
         8) editar_feedback ;;
-        9) exit 0 ;;
+        9) clear ; exit 0 ;;
     esac
 
 done
