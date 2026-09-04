@@ -1,0 +1,11 @@
+# puxa as últimas alterações do repositorio
+git pull origin main
+
+# adiciona as alterações
+git add .
+
+# empacotar as alterações com mensagem descritiva
+git commit -m "feat: escrever aq as alterações realizadas"
+
+# enviar ao github
+git push origin main
