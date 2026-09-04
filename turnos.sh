@@ -4,7 +4,7 @@
 # CONFIGURAÇÕES
 # ==========================================
 
-RAIZ="/opt/sisteminha"
+RAIZ="/opt/sistema"
 
 PASTA="$RAIZ/registros"
 ARTIGOS="$RAIZ/artigos/artigos.txt"
@@ -218,23 +218,6 @@ registrar_atividade() {
 
     read -rp "Pressione ENTER para voltar..."
 
-}
-
-registrar_atividade() {
-    while true; do
-        clear
-
-        OPCOES=(
-            "Rotina"
-            "Alterações críticas"
-            "Artigo"
-            "Explicação"
-            "Problema"
-            "Observação"
-            "Voltar"
-        )
-
-        selecionar_menu "${OPCOES[@]}"
 }
 
 # ==========================================
@@ -598,28 +581,24 @@ pesquisar_explicacao(){
 menu_explicacao(){
     while true; do
         clear
-        echo
-        echo "========== ESTUDOS =========="
-        echo
-        echo "1 - Nova explicação"
-        echo "2 - Abrir explicação"
-        echo "3 - Pesquisar explicações"
-        echo "v - Voltar"
-        echo
-
-        read -rp "Escolha uma opção: " OPCAO
+       
+        OPCOES=(
+         "Nova explicação"
+         "Abrir explicação"
+         "Pesquisar explicações"
+         "Voltar"
+        
+	)
+        
+        selecionar_menu "${OPCOES[@]}"
+        OPCAO=$?
 
         case $OPCAO in
         
-            1) nova_explicacao ;;
-            2) abrir_explicacao ;;
-            3) pesquisar_explicacao ;;
-            
-            [vV]) break ;;
-            
-            *)
-                echo "Opção inválida."
-                ;;
+            0) nova_explicacao ;;
+            1) abrir_explicacao ;;
+            2) pesquisar_explicacao ;;
+            3) break ;;
         esac
     done
 }
@@ -1103,7 +1082,7 @@ while true; do
         2) mostrar_hoje ;;
         3) mostrar_historico ;;
         4) menu_artigos ;;
-        5) menu_estudos ;;
+        5) menu_explicacao ;;
         6) menu_logs ;;
         7) gerar_feedback ;;
         8) editar_feedback ;;
