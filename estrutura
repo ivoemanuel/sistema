@@ -1,0 +1,37 @@
+
+1 - Ver último turno
+2 - Registrar atividade 
+	sub menu
+	1- rotina
+	2- alterações criticas (tem que funcionar da forma que o emanuel definiu em alterações)
+	3- artigo
+	4- explicação 
+	5 - Problema 
+	v- voltar
+3 - Ver registro de hoje
+4 - Ver histórico
+5 - Artigos
+	submenu
+	1- add artigo
+	2- listar
+	3- buscar
+	v- voltar
+6 - Explicações
+	submenu
+	1- nova
+	2- ver
+	3- buscar
+	v-
+
+7 - Problema 
+	submenu
+	1- ver diagnósticos 
+	2- add (vai pedir explicação e solução/ mesmo sistema das explicações)
+
+8 - logs
+9 - inf confi. (senha)
+s - Sair
+
+
+
+### ADD funcionalidade do feedback

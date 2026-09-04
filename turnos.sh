@@ -39,7 +39,7 @@ verificar_estrutura() {
     sudo chmod 664 "$ARTIGOS"
     sudo chmod 664 "$AFAZEREs"
     sudo chmod 664 "$DIAGNOSTICOS"
-}
+} 
 
 # ==========================================
 # CRIAR ARQUIVO DO DIA
@@ -274,6 +274,7 @@ listar_artigos() {
 
     if [[ ! -s "$ARTIGOS" ]]; then
         echo "Nenhum artigo cadastrado."
+        sleep 2
         return
     fi
 
@@ -281,6 +282,9 @@ listar_artigos() {
         printf "[%02d] %s\n", $1, $2
         printf "     %s\n\n", $3
     }' "$ARTIGOS"
+    
+    read -rp "Pressione ENTER para voltar..."
+
 }
 
 pesquisar_artigo(){
@@ -292,14 +296,20 @@ pesquisar_artigo(){
     read -rp "Digite o título ou palavra-chave: " PESQUISA
 
     if [[ -z "$PESQUISA" ]]; then
+        echo
         echo "Pesquisa vazia."
+        echo
+        sleep 2
         return
     fi
 
     RESULTADO=$(grep -i "$PESQUISA" "$ARTIGOS")
 
     if [[ -z "$RESULTADO" ]]; then
+        echo
         echo "Nenhum artigo encontrado."
+        echo
+        sleep 2
         return
     fi
 
@@ -308,6 +318,9 @@ pesquisar_artigo(){
         printf "[%02d] %s\n", $1, $2
         printf "     %s\n\n", $3
     }'
+
+    read -rp "Pressione ENTER para voltar..."
+
 }
 
 menu_artigos() {
@@ -413,7 +426,9 @@ abrir_explicacao(){
     ARQUIVOS=$(find "$EXPLICACAO" -maxdepth 1 -type f -name "*.txt" | sort)
 
     if [[ -z "$ARQUIVOS" ]]; then
+        echo
         echo "Nenhuma explicação cadastrada"
+        sleep 2
         return
     fi
 
@@ -435,18 +450,23 @@ abrir_explicacao(){
     read -rp "Digite o número da explicação: " ESCOLHA
 
     if [[ ! "$ESCOLHA" =~ ^[0-9]+$ ]]; then
+        echo
         echo "Digite um número válido."
+        sleep 2
         return
     fi
 
     if [[ -z "${LISTA_ARQUIVOS[$ESCOLHA]}" ]]; then
+        echo
         echo "Explicação não encontrada."
+        sleep 2
         return
     fi
     clear
     echo
     cat "${LISTA_ARQUIVOS[$ESCOLHA]}"
     echo "========================================"
+    read -rp "Pressione ENTER para voltar..."
 }
 
 pesquisar_explicacao(){
@@ -458,7 +478,9 @@ pesquisar_explicacao(){
     read -rp "Digite o título ou palavra-chave: " PESQUISA
 
     if [[ -z "$PESQUISA" ]]; then
+        echo
         echo "A Pesquisa não pode estar vazia."
+        sleep 2
         return
     fi
 
@@ -483,9 +505,14 @@ pesquisar_explicacao(){
     done < <(find "$EXPLICACAO" -maxdepth 1 -type f -name "*.txt" | sort)
 
     if [[ $ENCONTRADOS -eq 0 ]]; then
+        echo
         echo "Nenhuma explicação encontrada para: $PESQUISA"
+        sleep 2
     else
+        echo
         echo "Encontradas: $ENCONTRADOS explicação(ões)."
+        echo
+        read -rp "Pressione ENTER para voltar..."
     fi
 }
 
@@ -869,7 +896,7 @@ while true; do
     clear
 
     echo "========================================"
-    echo "           MEU QUERIDO DIÁRIO"
+    echo "           SISTEMA DE TAREFAS"
     echo "========================================"
     echo
     echo "Data:    $DATA"
