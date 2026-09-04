@@ -23,7 +23,8 @@ ARQUIVO="$PASTA/$DATA.txt"
 # ==========================================
 
 selecionar_menu() {
-
+    local COR_DESTAQUE="\e[44;97;1m" 
+    local RESET="\e[0m"
     local OPCOES=("$@")
     local SELECIONADO=0
     local TECLA
@@ -33,7 +34,7 @@ selecionar_menu() {
 
         for i in "${!OPCOES[@]}"; do
             if [[ $i -eq $SELECIONADO ]]; then
-                echo "🐧 ${OPCOES[$i]}"
+                echo -e "${COR_DESTAQUE} 🐧 ${OPCOES[$i]} ${RESET}"
             else
                 echo "  ${OPCOES[$i]}"
             fi
@@ -57,7 +58,7 @@ selecionar_menu() {
                     ;;
             esac
 
-        elif [[ "$TECLA" == "" ]]; then
+        elif [[ -z "$TECLA" ]]; then
             break
         fi
 
