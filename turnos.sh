@@ -62,6 +62,17 @@ selecionar_menu() {
 
         IFS= read -rsn1 TECLA
 
+        # BACKSPACE
+        if [[ "$TECLA" == $'\x7f' || "$TECLA" == $'\x08' ]]; then
+            return 255
+        fi
+
+        # ENTER
+        if [[ "$TECLA" == "" ]]; then
+            return "$SELECIONADO"
+        fi
+
+        # SETAS
         if [[ "$TECLA" == $'\x1b' ]]; then
 
             read -rsn2 TECLA
@@ -74,21 +85,19 @@ selecionar_menu() {
                     ((SELECIONADO++))
                     ;;
             esac
-
-        elif [[ -z "$TECLA" ]]; then
-            break
         fi
 
+        # Volta para o último item
         if (( SELECIONADO < 0 )); then
             SELECIONADO=$((${#OPCOES[@]} - 1))
         fi
 
+        # Volta para o primeiro item
         if (( SELECIONADO >= ${#OPCOES[@]} )); then
             SELECIONADO=0
         fi
-    done
 
-    return "$SELECIONADO"
+    done
 }
 
 
@@ -130,7 +139,7 @@ criar_registro() {
 
         cat > "$ARQUIVO" << EOF
 ========================================
-        REGISTRO DE TURNOS
+          REGISTRO DE TURNOS
 ========================================
 
 DATA: $DATA
@@ -167,45 +176,43 @@ mostrar_hoje() {
 # ==========================================
 
 registrar_atividade() {
+	while true; do
+	    clear
 
-    clear
+	    echo "========================================"
+	    echo "        REGISTRAR ATIVIDADE"
+	    echo "========================================"
+	    echo
 
-    echo "========================================"
-    echo "        REGISTRAR ATIVIDADE"
-    echo "========================================"
-    echo
+	OPCOES=(
+	    "Rotina"
+	    "Alterações críticas"
+	    "Artigo"
+	    "Explicação"
+	    "Problema"
+	    "Observação"
+#	    "Voltar"
+    	)
+    	
+        selecionar_menu "${OPCOES[@]}"
+        OPCAO=$?
 
-    echo "1 - Rotina"
-    echo "2 - Alterações críticas"
-    echo "3 - Artigo"
-    echo "4 - Explicação"
-    echo "5 - Problema"
-    echo "6 - Observação"
-    echo "v - Voltar"
-    echo
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
 
-    read -rp "Escolha o tipo: " TIPO
+    case "$OPCAO" in
 
-    case $TIPO in
-
-        1) CATEGORIA="ROTINA" ;;
-        2) CATEGORIA="ALTERACOES" ;;
-        3) CATEGORIA="ARTIGOS" ;;
-        4) CATEGORIA="EXPLICACOES" ;;
-        5) CATEGORIA="PROBLEMAS" ;;
-        6) CATEGORIA="OBSERVACOES" ;;
-
-        [vV])
-            clear
-            return ;;
-
-        *)
-            echo
-            echo "Opção inválida!"
-            sleep 2
-            return ;;
+        0) CATEGORIA="ROTINA" ;;
+        1) CATEGORIA="ALTERACOES" ;;
+        2) CATEGORIA="ARTIGOS" ;;
+        3) CATEGORIA="EXPLICACOES" ;;
+        4) CATEGORIA="PROBLEMAS" ;;
+        5) CATEGORIA="OBSERVACOES" ;;
+#        6)clear;return ;;
 
     esac
+
     echo
     read -rp "Descreva o que foi feito: " ATIVIDADE
 
@@ -235,7 +242,7 @@ registrar_atividade() {
     echo
 
     read -rp "Pressione ENTER para voltar..."
-
+done
 }
 
 # ==========================================
@@ -416,17 +423,21 @@ menu_artigos() {
             "Adicionar artigo"
             "Listar artigos"
             "Buscar artigo"
-            "Voltar"
+#            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}" 
         OPCAO=$?
 
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         case $OPCAO in
             0) adicionar_artigo ;;
             1) listar_artigos ;;
             2) pesquisar_artigo ;;
-            3) break;;
+#            3) break;;
         esac
     done
 }
@@ -604,19 +615,23 @@ menu_explicacao(){
          "Nova explicação"
          "Abrir explicação"
          "Pesquisar explicações"
-         "Voltar"
+#         "Voltar"
         
 	)
         
-        selecionar_menu "${OPCOES[@]}"
+        selecionar_menu "${OPCOES[@]}" 
         OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
 
         case $OPCAO in
         
             0) nova_explicacao ;;
             1) abrir_explicacao ;;
             2) pesquisar_explicacao ;;
-            3) break ;;
+#            3) break ;;
         esac
     done
 }
@@ -807,36 +822,25 @@ ls_diagnostico(){
 menu_diagnosticos(){
     while true ; do
         clear
-        echo
-        echo "========== DIAGNÓSTICOS =========="
-        echo
-        echo "1 - Adicionar diagnóstico"
-        echo "2 - Abrir diagnóstico"
-        echo "3 - Listar diagnósticos"
-        echo "v - Voltar"
-        echo
-    
-        read -rp "Escolha uma opção: " OPCAO
+        OPCOES=(
+            "Adicionar diagnóstico"
+            "Abrir diagnóstico"
+            "Listar diagnósticos"
+            "Voltar"
+        )
+
+        selecionar_menu "${OPCOES[@]}" 
+        OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
 
         case $OPCAO in
-            1)
-                add_diagnostico
-                ;;
-            2)
-                abrir_diagnostico
-                ;;
-            3)
-                ls_diagnostico
-                ;;
-            v)
-                clear
-                return
-                ;;
-            *)  
-                echo
-                echo "[ ERRO ] Opção inválida"
-                sleep 2
-                ;;
+            0)add_diagnostico;;
+            1)abrir_diagnostico;;  
+            2)ls_diagnostico;;
+            3)clear;return;;
         esac
         
     done
@@ -849,22 +853,26 @@ menu_diagnosticos(){
 menu_logs(){
     while true; do
         clear
+	
+    OPCOES=(
+        "Log de limpeza"
+        "Log de autenticação"
+        "Último monitoramento"
+        "Storage"
+        "Gotify"
+        "Kernel"
+#        "Voltar"
+    )
 
-        echo "========== LOGS =========="
-        echo
-        echo "1 - Log de limpeza"
-        echo "2 - Log de autenticação"
-        echo "3 - Último monitoramento"
-        echo "4 - Storage"
-        echo "5 - Gotify"
-        echo "6 - Kernel"
-        echo "v - Voltar"
-        echo
+        selecionar_menu "${OPCOES[@]}" 
+        OPCAO=$?
 
-        read -rp "Escolha uma opção: " OPCAO
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
 
         case $OPCAO in
-            1)
+            0)
                 clear
                 echo
                 echo "========== LOG DE LIMPEZA =========="
@@ -872,7 +880,7 @@ menu_logs(){
                 read -rp "Pressione ENTER para voltar..."
                 ;;
 
-            2)
+            1)
                 clear
                 echo
                 echo "========== LOG DE AUTENTICAÇÃO =========="
@@ -888,7 +896,7 @@ menu_logs(){
                 read -rp "Pressione ENTER para voltar..."
                 ;;
 
-            3)
+            2)
                 clear
                 echo
                 echo "=================================================="
@@ -897,14 +905,14 @@ menu_logs(){
                 read -rp "Pressione ENTER para voltar..."
                 ;;
 
-            4)
+            3)
                 clear
                 echo
                 cd /scripts/ && sudo ./storage.sh
                 read -rp "Pressione ENTER para voltar..."
                 ;;
 
-            5)
+            4)
                 clear
                 echo
                 #echo "========== GOTIFY =========="
@@ -927,7 +935,7 @@ menu_logs(){
                 fi
                 
                 ;;
-            6)
+            5)
                 clear
                 echo
                 read -rp "Deseja acompanhar o log em tempo real (s/n)? " OPCAO
@@ -937,7 +945,7 @@ menu_logs(){
                     sleep 1.5
                     sudo journalctl -kfn 30
                 else
-                    read -rp "Quantas linhas deseja ver? " LINHAS
+                    read -rp "Quantas linhas deseja ver? (min 20)" LINHAS
                 
                     # Garante que o valor informado é estritamente numérico
                     if [[ ! "$LINHAS" =~ ^[0-9]+$ ]]; then
@@ -949,13 +957,7 @@ menu_logs(){
                 fi
                 ;;
                 
-            [vV]) break ;;
-
-            *)
-                echo
-                echo "Opção inválida."
-                sleep 1.5
-                ;;
+#            6) break ;;
         esac
     done
 }
@@ -966,6 +968,7 @@ menu_logs(){
 # ==========================================
 
 gerar_feedback() {
+
     echo
     echo "========== FEEDBACK =========="
     echo
@@ -975,20 +978,29 @@ gerar_feedback() {
         return
     fi
 
-    FEEDBACK="/opt/turnos/feedback.txt"
+    FEEDBACK="/opt/turnos/feedback-$USUARIO.txt"
 
-    {
-        echo "Boa noite, pessoal! Segue o feedback do dia de hoje: ($DATA)"
-        echo
+    # Verifica se já existe um feedback de hoje
+    if [[ ! -f "$FEEDBACK" ]] || ! grep -q "^DATA: $DATA$" "$FEEDBACK"; then
 
-        grep '| S |' "$ARQUIVO" | while IFS='|' read -r HORA CATEGORIA MARCADOR ATIVIDADE; do
-            ATIVIDADE=$(echo "$ATIVIDADE" | sed 's/^ *//')
-            echo "- $ATIVIDADE"
-        done
+        {
+            echo "DATA: $DATA"
+            echo "USUARIO: $USUARIO"
+            echo
+            echo "Boa noite, pessoal! Segue o feedback do dia de hoje: ($DATA)"
+            echo
 
-        echo
-        echo "Bom descanso a todos, até amanhã! 🧬"
-    } > "$FEEDBACK"
+            grep '| S |' "$ARQUIVO" | while IFS='|' read -r HORA CATEGORIA MARCADOR ATIVIDADE; do
+                ATIVIDADE=$(echo "$ATIVIDADE" | sed 's/^ *//')
+                echo "- $ATIVIDADE"
+            done
+
+            echo
+            echo "Bom descanso a todos! 🧬"
+
+        } > "$FEEDBACK"
+
+    fi
 
     while true; do
 
@@ -1002,7 +1014,9 @@ gerar_feedback() {
         read -p "Deseja adicionar algo ao feedback? [s/N]: " ADICIONAR
 
         if [[ "$ADICIONAR" =~ ^[Ss]$ ]]; then
+
             clear
+
             echo
             echo "Digite o que deseja adicionar."
             echo "Digite FIM em uma linha separada quando terminar."
@@ -1045,20 +1059,23 @@ gerar_feedback() {
         fi
 
         break
+
     done
 
     clear
 
-    echo "========== FEEDBACK $DATA =========="
+    echo "========== FEEDBACK =========="
     echo
     cat "$FEEDBACK"
 
     echo
     read -p "Pressione ENTER para voltar ao menu..."
-}               
+}
+
 
 editar_feedback() {
-    FEEDBACK="/opt/turnos/feedback.txt"
+
+    FEEDBACK="/opt/turnos/feedback-$USUARIO.txt"
 
     if [[ ! -f "$FEEDBACK" ]]; then
         echo
@@ -1069,6 +1086,8 @@ editar_feedback() {
 
     nano "$FEEDBACK"
 }
+
+
 # ==========================================
 # AFAZERES
 # ==========================================
@@ -1227,11 +1246,15 @@ menu_afazeres(){
         "Listar tarefas"
         "Concluir tarefa"
         "Remover tarefa"
-        "Voltar"
+#        "Voltar"
     )
 
-    selecionar_menu "${OPCOES[@]}"
-    OPCAO=$?
+        selecionar_menu "${OPCOES[@]}" 
+        OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
     
         case "$OPCAO" in
         
@@ -1262,14 +1285,19 @@ while true; do
         "Artigos"
         "Estudos"
         "Logs"
-        "Gerar feedback"
+        "Feedback"
         "Editar feedback"
         "Tarefas"
-        "Sair"
+        "Diagnóstico"
+#        "Sair"
     )
 
     selecionar_menu "${OPCOES[@]}"
     OPCAO=$?
+
+    if [[ $OPCAO -eq 255 ]]; then
+        exit 0
+    fi
 
     case $OPCAO in
         0) mostrar_ultimo_turno ;;
@@ -1282,7 +1310,8 @@ while true; do
         7) gerar_feedback ;;
         8) editar_feedback ;;
         9) menu_afazeres;;
-        10) clear ; exit 0 ;;
+        10) menu_diagnosticos;;
+#        11) clear ; exit 0 ;;
     esac
 
 done
