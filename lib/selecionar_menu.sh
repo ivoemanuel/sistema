@@ -21,7 +21,7 @@
 # =============================================================================
 
 selecionar_menu() {
-    local COR_DESTAQUE="\e[44;97;1m" 
+    local COR_DESTAQUE="\e[48;2;138;43;226m" 
     local RESET="\e[0m"
     local OPCOES=("$@")
     local SELECIONADO=0
