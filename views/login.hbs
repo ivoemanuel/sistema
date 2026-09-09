@@ -1,0 +1,25 @@
+<div class="login-card">
+    <div class="login-card__logo">DNA <span>Feed</span></div>
+    <p class="login-card__subtitle">Acompanhe seus feedbacks diários</p>
+
+    {{#if error}}
+        <div class="alert alert--error">{{error}}</div>
+    {{/if}}
+
+    <form action="/login" method="POST">
+        <div class="form-group">
+            <label for="username">Usuário</label>
+            <input type="text" id="username" name="username" required autofocus autocomplete="username" />
+        </div>
+        <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" name="password" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn--primary btn--full">Entrar</button>
+    </form>
+
+    <div class="login-hint">
+        Usuários de teste (criados via <code>npm run seed</code>):<br />
+        <strong>admin / admin123</strong> (liderança) · <strong>joao / joao123</strong> · <strong>maria / maria123</strong>
+    </div>
+</div>

@@ -1,0 +1,89 @@
+<div class="dashboard-intro">
+    <h1>Olá, {{currentUser.username}}</h1>
+    <p class="dashboard-intro__subtitle">Aqui está o seu painel de acompanhamento diário.</p>
+</div>
+
+{{#if success}}<div class="alert alert--success">{{success}}</div>{{/if}}
+
+<div class="dashboard-grid">
+    <section class="card widget widget--compose">
+        <h2>Escreva seu feedback diário</h2>
+        <form action="/dashboard/feedback" method="POST" id="feedback-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="project_id">Projeto</label>
+                    <select id="project_id" name="project_id">
+                        <option value="">Sem projeto específico</option>
+                        {{#each projects}}
+                            <option value="{{this.id}}">{{this.name}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="date">Data</label>
+                    <input type="date" id="date" name="date" value="{{todayStr}}" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Feedback</label>
+                <div class="rich-toolbar">
+                    <button type="button" data-cmd="bold" title="Negrito"><b>B</b></button>
+                    <button type="button" data-cmd="italic" title="Itálico"><i>I</i></button>
+                    <button type="button" data-cmd="underline" title="Sublinhado"><u>U</u></button>
+                    <button type="button" data-cmd="insertUnorderedList" title="Lista">•</button>
+                </div>
+                <div id="rich-editor" class="rich-editor" contenteditable="true" data-placeholder="Conte como foi o seu dia, o que você entregou, bloqueios encontrados..."></div>
+                <input type="hidden" name="content" id="content-input" />
+            </div>
+
+            <button type="submit" class="btn btn--primary">Enviar feedback</button>
+        </form>
+    </section>
+
+    <aside class="widget widget--panel">
+        <div class="card status-widget">
+            <div>
+                <div class="status-widget__count">{{todaysFeedbacks.length}}</div>
+                <p class="status-widget__label">feedback(s) registrado(s) hoje</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Acesso rápido</h2>
+            <nav class="quick-links">
+                <a href="/calendar" class="quick-link">
+                    Calendário
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
+                <a href="/notes" class="quick-link">
+                    Notas pessoais
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
+                <a href="/history" class="quick-link">
+                    Histórico
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <section class="card widget widget--feed">
+        <h2>Feedbacks de hoje</h2>
+        {{#if todaysFeedbacks.length}}
+            {{#each todaysFeedbacks}}
+                <a href="/feedback/{{this.id}}" class="feedback-item">
+                    <div class="feedback-item__meta">
+                        <span class="feedback-item__date">{{formatDate this.date}}</span>
+                        {{#if this.project_name}}<span class="tag">{{this.project_name}}</span>{{/if}}
+                    </div>
+                    <div class="feedback-item__preview">{{{this.content}}}</div>
+                </a>
+            {{/each}}
+        {{else}}
+            <p class="empty-state">Nenhum feedback registrado hoje ainda.</p>
+        {{/if}}
+    </section>
+</div>
+
+<script src="/js/dashboard.js"></script>

@@ -1,0 +1,22 @@
+{
+  "name": "dna-feed",
+  "version": "1.0.0",
+  "description": "DNA Feed - Aplicação de registro e acompanhamento de feedbacks diários da equipe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node db/seed.js"
+  },
+  "keywords": ["feedback", "express", "sqlite", "handlebars"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-sqlite3": "^0.9.15",
+    "express": "^4.19.2",
+    "express-handlebars": "^7.1.2",
+    "express-session": "^1.18.0",
+    "sqlite3": "^5.1.7"
+  }
+}

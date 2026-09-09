@@ -1,0 +1,41 @@
+<div class="page-header">
+    <div>
+        <a href="/history" class="text-muted">&larr; Voltar ao histórico</a>
+        <h1>Feedback de {{feedback.username}}</h1>
+    </div>
+</div>
+
+{{#if success}}<div class="alert alert--success">{{success}}</div>{{/if}}
+
+<div class="card">
+    <div class="feedback-item__meta">
+        <span class="feedback-item__date">{{formatDate feedback.date}}</span>
+        {{#if feedback.project_name}}<span class="tag">{{feedback.project_name}}</span>{{/if}}
+    </div>
+    <div>{{{feedback.content}}}</div>
+</div>
+
+<div class="card">
+    <h2>Notas da liderança</h2>
+
+    {{#if notes.length}}
+        {{#each notes}}
+            <div class="note-item">
+                <div class="note-item__meta">{{this.admin_username}} · {{formatDate this.created_at}}</div>
+                <div>{{this.note_content}}</div>
+            </div>
+        {{/each}}
+    {{else}}
+        <p class="text-muted">Nenhuma nota adicionada ainda.</p>
+    {{/if}}
+
+    {{#if isAdmin}}
+        <form action="/feedback/{{feedback.id}}/notes" method="POST" class="mt-1">
+            <div class="form-group">
+                <label for="note_content">Adicionar nota</label>
+                <textarea id="note_content" name="note_content" rows="3" placeholder="Escreva uma observação para este feedback..."></textarea>
+            </div>
+            <button type="submit" class="btn btn--accent">Adicionar nota</button>
+        </form>
+    {{/if}}
+</div>

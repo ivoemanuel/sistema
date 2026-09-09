@@ -1,0 +1,25 @@
+<header class="navbar">
+    <div class="navbar__brand">
+        <span class="navbar__logo">DNA</span>
+        <span class="navbar__title">Feed</span>
+    </div>
+
+    <nav class="navbar__links">
+        <a href="/dashboard" class="navbar__link {{#if (eq active "dashboard")}}navbar__link--active{{/if}}">Início</a>
+        <a href="/history" class="navbar__link {{#if (eq active "history")}}navbar__link--active{{/if}}">Histórico</a>
+        <a href="/calendar" class="navbar__link {{#if (eq active "calendar")}}navbar__link--active{{/if}}">Calendário</a>
+        <a href="/notes" class="navbar__link {{#if (eq active "notes")}}navbar__link--active{{/if}}">Notas Pessoais</a>
+    </nav>
+
+    <div class="navbar__user">
+        {{#if currentUser}}
+            <span class="navbar__username">
+                {{currentUser.username}}
+                {{#if (eq currentUser.role "admin")}}<span class="badge badge--admin">admin</span>{{/if}}
+            </span>
+            <form action="/logout" method="POST" class="navbar__logout-form">
+                <button type="submit" class="btn btn--ghost btn--small">Sair</button>
+            </form>
+        {{/if}}
+    </div>
+</header>

@@ -1,0 +1,20 @@
+<div class="page-header">
+    <h1>Calendário de Feedbacks</h1>
+</div>
+
+<div class="calendar" id="calendar-app" data-year="{{year}}" data-month="{{month}}" data-marked='{{{markedDaysJSON}}}'>
+    <div class="calendar__header">
+        <button class="btn btn--ghost btn--small" id="prev-month">&larr; Anterior</button>
+        <h2 id="calendar-title"></h2>
+        <button class="btn btn--ghost btn--small" id="next-month">Próximo &rarr;</button>
+    </div>
+
+    <div class="calendar__grid" id="calendar-weekdays"></div>
+    <div class="calendar__grid" id="calendar-days"></div>
+
+    <div class="calendar__legend">
+        <span class="calendar__legend-dot"></span> Dia com feedback registrado
+    </div>
+</div>
+
+<script src="/js/calendar.js"></script>

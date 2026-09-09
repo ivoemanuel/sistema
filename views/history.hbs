@@ -1,0 +1,60 @@
+<div class="page-header">
+    <h1>Histórico de Feedbacks</h1>
+</div>
+
+<div class="card">
+    <h2>Filtros</h2>
+    <form action="/history" method="GET" class="form-row" style="align-items:flex-end;">
+        <div class="form-group">
+            <label for="start_date">De</label>
+            <input type="date" id="start_date" name="start_date" value="{{filters.start_date}}" />
+        </div>
+        <div class="form-group">
+            <label for="end_date">Até</label>
+            <input type="date" id="end_date" name="end_date" value="{{filters.end_date}}" />
+        </div>
+        <div class="form-group">
+            <label for="project_id">Projeto</label>
+            <select id="project_id" name="project_id">
+                <option value="">Todos os projetos</option>
+                {{#each projects}}
+                    <option value="{{this.id}}" {{#if (eq (toString this.id) ../filters.project_id)}}selected{{/if}}>{{this.name}}</option>
+                {{/each}}
+            </select>
+        </div>
+        {{#if isAdmin}}
+        <div class="form-group">
+            <label for="user_id">Membro da equipe</label>
+            <select id="user_id" name="user_id">
+                <option value="">Todos os membros</option>
+                {{#each users}}
+                    <option value="{{this.id}}" {{#if (eq (toString this.id) ../filters.user_id)}}selected{{/if}}>{{this.username}}</option>
+                {{/each}}
+            </select>
+        </div>
+        {{/if}}
+        <div class="form-group">
+            <button type="submit" class="btn btn--primary">Filtrar</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Resultados</h2>
+    {{#if feedbacks.length}}
+        {{#each feedbacks}}
+            <a href="/feedback/{{this.id}}" class="feedback-item">
+                <div class="feedback-item__meta">
+                    <span class="feedback-item__date">{{formatDate this.date}}</span>
+                    <span class="flex gap-1">
+                        {{#if this.project_name}}<span class="tag">{{this.project_name}}</span>{{/if}}
+                        {{#if ../isAdmin}}<span class="tag">{{this.username}}</span>{{/if}}
+                    </span>
+                </div>
+                <div class="feedback-item__preview">{{{this.content}}}</div>
+            </a>
+        {{/each}}
+    {{else}}
+        <div class="empty-state">Nenhum feedback encontrado para os filtros selecionados.</div>
+    {{/if}}
+</div>
