@@ -4,7 +4,7 @@
 # CONFIGURAÇÕES
 # ==========================================
 
-RAIZ="/opt/turnos"
+RAIZ="/opt/sistema"
 
 PASTA="$RAIZ/registros"
 ARTIGOS="$RAIZ/artigos/artigos.txt"
@@ -76,14 +76,10 @@ selecionar_menu() {
         if [[ "$TECLA" == $'\x1b' ]]; then
 
             read -rsn2 TECLA
-
+            
             case "$TECLA" in
-                "[A")
-                    ((SELECIONADO--))
-                    ;;
-                "[B")
-                    ((SELECIONADO++))
-                    ;;
+                "[A")((SELECIONADO--));;
+                "[B")((SELECIONADO++));;
             esac
         fi
 
@@ -191,7 +187,6 @@ registrar_atividade() {
 	    "Explicação"
 	    "Problema"
 	    "Observação"
-#	    "Voltar"
     	)
     	
         selecionar_menu "${OPCOES[@]}"
@@ -209,7 +204,6 @@ registrar_atividade() {
         3) CATEGORIA="EXPLICACOES" ;;
         4) CATEGORIA="PROBLEMAS" ;;
         5) CATEGORIA="OBSERVACOES" ;;
-#        6)clear;return ;;
 
     esac
 
@@ -967,125 +961,7 @@ menu_logs(){
 # FEEDBACK
 # ==========================================
 
-gerar_feedback() {
 
-    echo
-    echo "========== FEEDBACK =========="
-    echo
-
-    if [[ ! -f "$ARQUIVO" ]]; then
-        echo "Não existe registro para hoje."
-        return
-    fi
-
-    FEEDBACK="/opt/turnos/feedback-$USUARIO.txt"
-
-    # Verifica se já existe um feedback de hoje
-    if [[ ! -f "$FEEDBACK" ]] || ! grep -q "^DATA: $DATA$" "$FEEDBACK"; then
-
-        {
-            echo "DATA: $DATA"
-            echo "USUARIO: $USUARIO"
-            echo
-            echo "Boa noite, pessoal! Segue o feedback do dia de hoje: ($DATA)"
-            echo
-
-            grep '| S |' "$ARQUIVO" | while IFS='|' read -r HORA CATEGORIA MARCADOR ATIVIDADE; do
-                ATIVIDADE=$(echo "$ATIVIDADE" | sed 's/^ *//')
-                echo "- $ATIVIDADE"
-            done
-
-            echo
-            echo "Bom descanso a todos! 🧬"
-
-        } > "$FEEDBACK"
-
-    fi
-
-    while true; do
-
-        clear
-
-        echo "========== FEEDBACK =========="
-        echo
-        cat "$FEEDBACK"
-        echo
-
-        read -p "Deseja adicionar algo ao feedback? [s/N]: " ADICIONAR
-
-        if [[ "$ADICIONAR" =~ ^[Ss]$ ]]; then
-
-            clear
-
-            echo
-            echo "Digite o que deseja adicionar."
-            echo "Digite FIM em uma linha separada quando terminar."
-            echo
-
-            ADICIONAL=""
-
-            while true; do
-                read -r LINHA
-
-                if [[ "$LINHA" == "FIM" ]]; then
-                    break
-                fi
-
-                ADICIONAL+="$LINHA"$'\n'
-            done
-
-            if [[ -n "${ADICIONAL//[$'\n\r ']/}" ]]; then
-
-                TEMP=$(mktemp)
-
-                # Remove a frase final e a linha vazia anterior
-                sed '$d' "$FEEDBACK" | sed '$d' > "$TEMP"
-
-                # Adiciona cada linha como um novo item
-                while IFS= read -r LINHA; do
-                    if [[ -n "${LINHA//[$'\r ']/}" ]]; then
-                        echo "- $LINHA" >> "$TEMP"
-                    fi
-                done <<< "$ADICIONAL"
-
-                # Adiciona novamente a frase final
-                echo >> "$TEMP"
-                echo "Bom descanso a todos! 🧬" >> "$TEMP"
-
-                mv "$TEMP" "$FEEDBACK"
-            fi
-
-            continue
-        fi
-
-        break
-
-    done
-
-    clear
-
-    echo "========== FEEDBACK =========="
-    echo
-    cat "$FEEDBACK"
-
-    echo
-    read -p "Pressione ENTER para voltar ao menu..."
-}
-
-
-editar_feedback() {
-
-    FEEDBACK="/opt/turnos/feedback-$USUARIO.txt"
-
-    if [[ ! -f "$FEEDBACK" ]]; then
-        echo
-        echo "Ainda não existe um feedback para editar."
-        read -p "Pressione ENTER para voltar..."
-        return
-    fi
-
-    nano "$FEEDBACK"
-}
 
 
 # ==========================================

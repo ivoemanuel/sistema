@@ -199,12 +199,15 @@ menu_estudos(){
         selecionar_menu "${OPCOES[@]}"
         OPCAO=$?
 
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         case $OPCAO in
         
             0) nova_explicacao ;;
             1) abrir_explicacao ;;
             2) pesquisar_explicacao ;;
-            3) break ;;
         esac
     done
 }

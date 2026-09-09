@@ -216,11 +216,14 @@ menu_diagnosticos(){
         selecionar_menu "${OPCOES[@]}"
         local OPCAO=$?
 
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         case $OPCAO in
             0) add_diagnostico ;;
             1) abrir_diagnostico ;;
             2) ls_diagnostico ;;
-            3) break ;;
         esac
     done
 }

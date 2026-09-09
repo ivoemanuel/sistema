@@ -327,13 +327,16 @@ menu_turnos() {
 
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA="$?"
+        
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
 
         case "$ESCOLHA" in
             0) mostrar_ultimo_turno ;;
             1) mostrar_hoje ;;
             2) mostrar_historico ;;
             3) resumo_turno ;;
-            4) break ;;
         esac
     done
 }

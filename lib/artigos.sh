@@ -171,17 +171,19 @@ menu_artigos() {
             "Adicionar artigo"
             "Listar artigos"
             "Buscar artigo"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}" 
         OPCAO=$?
 
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         case $OPCAO in
             0) adicionar_artigo ;;
             1) listar_artigos ;;
             2) pesquisar_artigo ;;
-            3) break;;
         esac
     done
 }

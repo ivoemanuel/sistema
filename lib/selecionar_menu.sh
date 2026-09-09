@@ -55,6 +55,42 @@ selecionar_menu() {
 
         IFS= read -rsn1 TECLA
 
+        # BACKSPACE
+        if [[ "$TECLA" == $'\x7f' || "$TECLA" == $'\x08' ]]; then
+            ACAO_MENU="BACK"
+            return 255
+        fi
+
+        # ENTER
+        if [[ "$TECLA" == "" ]]; then
+            return "$SELECIONADO"
+        fi
+
+        # SETAS
+        if [[ "$TECLA" == $'\x1b' ]]; then
+
+            read -rsn2 TECLA
+
+            case "$TECLA" in
+                "[A")
+                    ((SELECIONADO--))
+                    ;;
+                "[B")
+                    ((SELECIONADO++))
+                    ;;
+            esac
+        fi
+
+        # Volta para o último item
+        if (( SELECIONADO < 0 )); then
+            SELECIONADO=$((${#OPCOES[@]} - 1))
+        fi
+
+        # Volta para o primeiro item
+        if (( SELECIONADO >= ${#OPCOES[@]} )); then
+            SELECIONADO=0
+        fi
+
         if [[ "$TECLA" == $'\x1b' ]]; then
             read -rsn2 TECLA
             case "$TECLA" in

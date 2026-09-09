@@ -265,6 +265,10 @@ menu_logs(){
         
         selecionar_menu "${OPCOES[@]}"
         
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         ESCOLHA="$?"
         case $ESCOLHA in
             0) menu_scripts ;;

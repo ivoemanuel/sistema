@@ -158,11 +158,14 @@ menu_tarefas(){
     selecionar_menu "${OPCOES[@]}"
     OPCAO=$?
     
+    if [[ $OPCAO -eq 255 ]]; then
+        return
+    fi
+
         case "$OPCAO" in
         
             0) add_tarefa ;;
             1) ls_tarefas ;;
-            2) break ;;
     
         esac
     done

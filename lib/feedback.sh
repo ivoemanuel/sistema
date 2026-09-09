@@ -171,13 +171,16 @@ menu_feedback() {
         )
 
         selecionar_menu "${OPCOES[@]}"
-        
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         ESCOLHA=$?
         case "$ESCOLHA" in
             0) gerar_feedback ;;
             1) editar_feedback ;;
             2) enviar_feedback_wpp ;;
-            3) break ;;
         esac
     done
 }
