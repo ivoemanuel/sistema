@@ -1,0 +1,22 @@
+ALTERAÇÕES DE HOJE - 08/09/2026
+===============================
+EMANUEL:
+    - Parte de feedback da Rayssa foi passada para sistema.sh - validado
+    - Envio do feedback via wpp funcionando (não é possível enviar emoji, ao que tudo indica, essa limitação é do lado deles) - validado
+    - Tudo passado para apenas 1 arquivo (sistema.sh) - validado
+    - Problema que tinha ao adicionar um diagnóstico (na confirmação de reabrir o arquivo ao deixa-lo em branco) corrigido - validado
+===============================
+RAYSSA:
+
+===============================
+
+
+
+não coloquei o backspace para voltar ainda
+não mexi no menu de tarefas ainda
+
+
+
+validado = testado e funcionando
+testando = em processo de testes
+feito    = apenas feito, sem testes
