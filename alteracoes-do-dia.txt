@@ -7,15 +7,38 @@ EMANUEL:
     - Problema que tinha ao adicionar um diagnóstico (na confirmação de reabrir o arquivo ao deixa-lo em branco) corrigido - validado
 ===============================
 RAYSSA:
+    - Implementação do backspace como função de voltar
+        \turnos                                 (validado)
+            \sub menus                          (validado)
+        \Registrar atividade                    (validado)
+        \Menu turnos                            (validado)
+        \Artigos                                (validado)
+            \sub menus                          (validado)
+        \Estudos                                (validado)
+            \sub menu                           (validado)
+        \Tarefas                                (validado)
+            \sub menu                           (validado)
+        \Diagnósticos                           (validado)
+        \Logs                                   (validado)
+        \Feedback                               (validado) 
 
-===============================
-
-
-
-não coloquei o backspace para voltar ainda
-não mexi no menu de tarefas ainda
-
-
+    - correção necessária na função diagnóstico
+        \ "abrir diagnóstico" não está funcionando
+        \mudança necessária, ao finalizar o diagnóstico e salvar, ele deve limpar a tela (validado)
+    
+    - mudança "Pressione ENTER para voltar..." para "Press ENTER"
+    
+    - linha removida em função da estética 
+        "Abrindo editor para preencher o diagnóstico
+        Preencha abaixo de cada seção (NÃO apague os títulos com '===')
+        Ctrl+O para salvar, Ctrl+X para sair"
+    
+    - novo "tarefas" sendo implementado (testando)
+        \ + adiciona
+        \ d deleta e pede confirmação 
+        \ < > setas mudando o estado da tarefa
+        \ dificuldade encontrada: alinhamento da tabela no terminal
+===============================================================
 
 validado = testado e funcionando
 testando = em processo de testes

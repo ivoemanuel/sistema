@@ -59,7 +59,7 @@ selecionar_menu() {
     local COR_DESTAQUE="\e[48;2;138;43;226m" RESET="\e[0m" 
     local OPCOES=("$@")
     local SELECIONADO=0 
-    local TECLA
+    local TECLA RETORNO
 
     ACAO_MENU="ENTER"
 
@@ -81,14 +81,27 @@ selecionar_menu() {
 
         if [[ "$HABILITAR_DEL" == "1" ]]; then
             echo
-            echo "↑ ↓ navegar | ENTER selecionar | DEL remover"
+            echo "↑ ↓ navegar | ENTER selecionar | DEL remover | BACKSPACE voltar"
         else
             echo
-            echo "↑ ↓ navegar | ENTER selecionar"
+            echo "↑ ↓ navegar | ENTER selecionar | BACKSPACE voltar"
         fi
 
         IFS= read -rsn1 TECLA
 
+        # BACKSPACE
+        if [[ "$TECLA" == $'\x7f' || "$TECLA" == $'\x08' ]]; then
+            RETORNO=255
+            break
+        fi
+
+        # ENTER
+        if [[ "$TECLA" == "" ]]; then
+            RETORNO=$SELECIONADO
+            break
+        fi
+
+        # SETAS / DELETE
         if [[ "$TECLA" == $'\x1b' ]]; then
             read -rsn2 TECLA
             case "$TECLA" in
@@ -100,16 +113,13 @@ selecionar_menu() {
                         read -rsn1 TECLA_TIL
                         if [[ "$TECLA_TIL" == "~" ]]; then
                             ACAO_MENU="DEL"
+                            RETORNO=$SELECIONADO
                             break
                         fi
                     fi
                     ;;
             esac
-        elif [[ -z "$TECLA" ]]; then
-            ACAO_MENU="ENTER"
-            break
         fi
-
         if (( SELECIONADO < 0 )); then
             SELECIONADO=$((${#OPCOES[@]} - 1))
         fi
@@ -123,8 +133,9 @@ selecionar_menu() {
     HABILITAR_DEL=0
     MENSAGEM_MENU=""
 
-    return "$SELECIONADO"
+    return "$RETORNO"
 }
+
 
 # ==========================================
 # CRIAR ARQUIVO DO DIA
@@ -178,16 +189,15 @@ mostrar_hoje() {
         if [[ ${#OPCOES[@]} -eq 0 ]]; then
             echo "Nenhuma atividade registrada ainda hoje"
             echo
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER"
         fi
 
-        OPCOES+=("Voltar")
         HABILITAR_DEL=1
         selecionar_menu "${OPCOES[@]}"
         ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1)) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         LINHA_SELECIONADA="${LINHAS_ARQUIVO[$ESCOLHA]}"
@@ -201,7 +211,7 @@ mostrar_hoje() {
         if [[ "$USUARIO_L" != "$USUARIO" ]]; then
             echo
             echo "[ ERRO ]: Você só pode editar ou remover atividades registradas por você" 
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER"
             continue
         fi
 
@@ -222,7 +232,7 @@ mostrar_hoje() {
         if [[ -z "$NOVA_ATIVIDADE" ]]; then
             echo
             echo "A atividade não pode ficar vazia"
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER"
             continue
         fi
 
@@ -231,7 +241,7 @@ mostrar_hoje() {
         if [[ ! "$CONFIRMACAO" =~ ^[sS]$ ]]; then
             echo
             echo "Alteração cancelada"
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER"
             continue
         fi
 
@@ -247,7 +257,7 @@ mostrar_hoje() {
 
         echo
         echo "Atividade atualizada com sucesso!"
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER"
     done
 }
 
@@ -264,13 +274,16 @@ registrar_atividade() {
         "Explicação"
         "Problema"
         "Observação"
-        "Voltar"
     )
 
     local TIPO CATEGORIA ATIVIDADE MARCADOR FEEDBACK USUARIO_LOWER ARQ_FEEDBACK_USUARIO
 
     selecionar_menu "${OPCOES[@]}"
     local TIPO=$?
+
+    if [[ $TIPO -eq 255 ]]; then
+        return
+    fi
 
     case $TIPO in
         0) CATEGORIA="ROTINA" ;;
@@ -279,7 +292,6 @@ registrar_atividade() {
         3) CATEGORIA="EXPLICACOES" ;;
         4) CATEGORIA="PROBLEMAS" ;;
         5) CATEGORIA="OBSERVACOES" ;;
-        6) clear ; return ;;
     esac
     echo
     read -e -rp "Descreva o que foi feito: " ATIVIDADE
@@ -287,7 +299,7 @@ registrar_atividade() {
     if [ -z "$ATIVIDADE" ]; then
         echo
         echo "A atividade não pode estar vazia."
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER"
         return
     fi
 
@@ -313,7 +325,7 @@ registrar_atividade() {
     echo
     echo "Atividade registrada com sucesso!"
     echo
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER"
 
 }
 
@@ -352,7 +364,7 @@ mostrar_ultimo_turno() {
 
     echo
     echo "========================================"
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER"
 }
 
 # ==========================================
@@ -373,7 +385,7 @@ mostrar_historico() {
 
             echo "Nenhum registro encontrado."
             echo
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER"
             return
         fi
 
@@ -386,13 +398,11 @@ mostrar_historico() {
             ARQUIVOS_ENCONTRADOS+=("$NOME_ARQUIVO")
         done < <(ls -1 "$DIR_REGISTROS"/*.txt | sort -r)
 
-        OPCOES+=("Voltar")
-
         selecionar_menu "${OPCOES[@]}"
         ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1 )) ]]; then
-           break 
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         clear
@@ -403,7 +413,7 @@ mostrar_historico() {
         cat "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
         echo
         echo "========================================"
-        read -rp "Pressione ENTER para voltar ao histórico..."
+        read -rp "Press ENTER para voltar ao histórico..."
     done
 }
 
@@ -415,7 +425,7 @@ resumo_turno() {
     if [[ ! -f "$ARQUIVO" ]] || ! grep -q "|" "$ARQUIVO"; then
         echo "Nenhuma atividade registrada ainda hoje"
         echo
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER"
         return
     fi
 
@@ -435,7 +445,7 @@ resumo_turno() {
     echo "$TOTAL_FEEDBACK"
 
     echo
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER"
 }
 
 
@@ -451,18 +461,21 @@ menu_turnos() {
             "Ver registro de hoje"
             "Ver histórico"
             "Resumo do turno"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
-        
+
         local ESCOLHA="$?"
+        
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+        
         case "$ESCOLHA" in
             0) mostrar_ultimo_turno ;;
             1) mostrar_hoje ;;
             2) mostrar_historico ;;
             3) resumo_turno ;;
-            4) break ;;
         esac
     done
 }
@@ -500,7 +513,7 @@ adicionar_artigo(){
     echo
     echo "======================================"
     echo "Artigo adicionado com sucesso!"
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER"
 }
 
 listar_artigos() {
@@ -534,14 +547,12 @@ listar_artigos() {
             IDS+=("$ID")
         done < <(sort -n "$ARQ_ARTIGOS")
 
-        OPCOES+=("Voltar")
-
         HABILITAR_DEL=1
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1 )) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         local ID_SELECIONADO="${IDS[$ESCOLHA]}"
@@ -564,7 +575,7 @@ listar_artigos() {
         echo "Título: ${TITULOS[$ESCOLHA]}"
         echo "Link:   ${LINKS[$ESCOLHA]}"
         echo "========================================"
-        read -rp "Pressione ENTER para voltar à lista..."
+        read -rp "Press ENTER para voltar à lista..."
     done
 }
 
@@ -611,14 +622,12 @@ pesquisar_artigo(){
             sleep 2
             return
         fi
-    
-        OPCOES+=("Voltar")
 
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1 )) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         clear
@@ -626,7 +635,7 @@ pesquisar_artigo(){
         echo "Título: ${TITULOS[$ESCOLHA]}"
         echo "Link:   ${LINKS[$ESCOLHA]}"
         echo "========================================"
-        read -rp "Pressione ENTER para voltar à busca..."
+        read -rp "Press ENTER para voltar à busca..."
     done
 
 }
@@ -638,17 +647,20 @@ menu_artigos() {
             "Adicionar artigo"
             "Listar artigos"
             "Buscar artigo"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}" 
         
         local OPCAO=$?
+        
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+        
         case $OPCAO in
             0) adicionar_artigo ;;
             1) listar_artigos ;;
             2) pesquisar_artigo ;;
-            3) break;;
         esac
     done
 }
@@ -676,10 +688,7 @@ nova_explicacao(){
 
     TEMP_EXP=$(mktemp)
     clear
-    echo
-    echo "Abrindo editor para digitar o conteúdo da explicação"
-    echo "Ctrl+O para salvar, Ctrl+X para sair"
-    read -rp "Pressione ENTER para continuar..."
+    read -rp "Press ENTER para brir o nano"
     echo
 
     nano "$TEMP_EXP"
@@ -689,7 +698,7 @@ nova_explicacao(){
     if [[ -z "$CONTEUDO" ]]; then
         echo
         echo "O conteúdo não pode estar vazio"
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER "
         return
     fi
     
@@ -715,7 +724,7 @@ nova_explicacao(){
     echo
     echo "Anotação salva com sucesso!"
     echo "Arquivo: $ARQUIVO_EXPLICACAO"
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER "
 }
 
 abrir_explicacao(){
@@ -748,14 +757,12 @@ abrir_explicacao(){
             ARQUIVOS_ENCONTRADOS+=("$ARQUIVO_ATUAL")
         done <<< "$ARQUIVOS"
 
-        OPCOES+=("Voltar")
-
         HABILITAR_DEL=1
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1 )) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         local TITULO_SELECIONADO="${OPCOES[$ESCOLHA]}"
@@ -774,7 +781,7 @@ abrir_explicacao(){
         cat "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
         echo
         echo "========================================="
-        read -rp "Pressione ENTER para voltar à lista..."
+        read -rp "Press ENTER para voltar à lista..."
     done
 }
 
@@ -791,7 +798,7 @@ pesquisar_explicacao(){
     if [[ -z "$PESQUISA" ]]; then
         echo
         echo "A Pesquisa não pode estar vazia."
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER "
         return
     fi
 
@@ -819,14 +826,13 @@ pesquisar_explicacao(){
         sleep 2
     fi
     # add a opção voltar
-    OPCOES+=("Voltar")
 
     while true; do
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1)) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         clear
@@ -834,7 +840,7 @@ pesquisar_explicacao(){
         cat "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
         echo
         echo "========================================"
-        read -rp "Pressione ENTER para voltar aos resultados..."
+        read -rp "Press ENTER para voltar aos resultados..."
     done
 }
 
@@ -845,17 +851,20 @@ menu_estudos(){
             "Nova explicação"
             "Abrir explicação"
             "Pesquisar explicações"
-            "Voltar"
 	    )
         
         selecionar_menu "${OPCOES[@]}"
         
         local OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         case $OPCAO in
             0) nova_explicacao ;;
             1) abrir_explicacao ;;
             2) pesquisar_explicacao ;;
-            3) break ;;
         esac
     done
 }
@@ -864,6 +873,266 @@ menu_estudos(){
 # TAREFAS
 # ==========================================
 
+LARG_TAREFA=30
+LARG_PRIORIDADE=11
+LARG_PRAZO=10
+
+COR_VERDE="\e[38;5;46m"
+COR_AMARELO="\e[38;2;255;255;0m"
+COR_VERMELHO="\e[38;2;255;0;0m"
+COR_AZUL="\e[38;2;0;191;255m"
+COR_CINZA="\e[38;5;245m"
+COR_SEL="\e[7m"     # inverte fundo/texto na linha selecionada
+RESET="\e[0m"
+
+# --------------------- Funções auxiliares ---------------------
+
+repetir() {
+    # repetir <quantidade> <caractere-utf8>  (evita 'tr', que quebra multibyte)
+    local n="$1" ch="$2" out=""
+    for (( k=0; k<n; k++ )); do out+="$ch"; done
+    printf '%s' "$out"
+}
+
+centralizar() {
+    # centralizar "texto" largura
+    local texto="$1" largura="$2" len esq dir
+    len=${#texto}
+    if (( len >= largura )); then
+        printf '%s' "${texto:0:largura}"
+        return
+    fi
+    local total=$(( largura - len ))
+    esq=$(( total / 2 ))
+    dir=$(( total - esq ))
+    printf '%*s%s%*s' "$esq" '' "$texto" "$dir" ''
+}
+
+preencher_direita() {
+    # preencher_direita "texto" largura  -> como printf "%-Ns", mas seguro p/ UTF-8
+    local texto="$1" largura="$2" falta
+    falta=$(( largura - ${#texto} ))
+    (( falta < 0 )) && falta=0
+    printf '%s%*s' "$texto" "$falta" ''
+}
+
+truncar_esq() {
+    # truncar_esq "texto" largura  -> alinhado à esquerda, com "…" se estourar
+    local texto="$1" largura="$2"
+    if (( ${#texto} > largura )); then
+        printf '%s' "${texto:0:$((largura-1))}…"
+    else
+        printf '%-*s' "$largura" "$texto"
+    fi
+}
+
+# Lê uma tecla (trata setas, backspace e enter)
+ler_tecla() {
+    local tecla resto
+    IFS= read -rsn1 tecla
+    if [[ $tecla == $'\x1b' ]]; then
+        read -rsn2 -t 0.02 resto
+        case "$resto" in
+            '[A') echo "CIMA" ;;
+            '[B') echo "BAIXO" ;;
+            '[C') echo "DIREITA" ;;
+            '[D') echo "ESQUERDA" ;;
+            *)    echo "ESC" ;;
+        esac
+    elif [[ $tecla == $'\x7f' || $tecla == $'\x08' ]]; then
+        echo "BACKSPACE"
+    elif [[ $tecla == "+" ]]; then
+        echo "MAIS"
+    elif [[ $tecla == "d" || $tecla == "D" ]]; then
+        echo "DEL"
+    elif [[ -z $tecla ]]; then
+        echo "ENTER"
+    else
+        echo "OUTRO"
+    fi
+}
+
+# Dado um STATUS, define SIMBOLO e COR_STATUS globais
+status_info() {
+    case "$1" in
+        ANDAMENTO) SIMBOLO="[>]"; COR_STATUS="$COR_AMARELO" ;;
+        CONCLUIDA) SIMBOLO="[✓]"; COR_STATUS="$COR_VERDE" ;;
+        *)         SIMBOLO="[ ]"; COR_STATUS="$COR_CINZA" ;;
+    esac
+}
+
+proximo_status() {
+    case "$1" in
+        ABERTA)    echo "ANDAMENTO" ;;
+        ANDAMENTO) echo "CONCLUIDA" ;;
+        CONCLUIDA) echo "ABERTA" ;;
+        *)         echo "ABERTA" ;;
+    esac
+}
+
+status_anterior() {
+    case "$1" in
+        ABERTA)    echo "CONCLUIDA" ;;
+        ANDAMENTO) echo "ABERTA" ;;
+        CONCLUIDA) echo "ANDAMENTO" ;;
+        *)         echo "ABERTA" ;;
+    esac
+}
+
+# --------------------- Desenho da tabela ---------------------
+
+desenhar_tabela() {
+    local total=${#IDS[@]}
+    local TOPO MEIO BASE
+    TOPO="┌──────┬$(repetir $((LARG_TAREFA+2)) ─)┬$(repetir $((LARG_PRIORIDADE+2)) ─)┬$(repetir $((LARG_PRAZO+2)) ─)┐"
+    MEIO="├──────┼$(repetir $((LARG_TAREFA+2)) ─)┼$(repetir $((LARG_PRIORIDADE+2)) ─)┼$(repetir $((LARG_PRAZO+2)) ─)┤"
+    BASE="└──────┴$(repetir $((LARG_TAREFA+2)) ─)┴$(repetir $((LARG_PRIORIDADE+2)) ─)┴$(repetir $((LARG_PRAZO+2)) ─)┘"
+    local largura_interna=$(( ${#TOPO} - 2 ))
+
+    clear
+    echo "$TOPO"
+
+    # linha de título com contador [ x/total ]
+    local titulo=" LISTA DE TAREFAS" contagem="[ $((SEL+1))/$total ] "
+    local espacos=$(( largura_interna - ${#titulo} - ${#contagem} ))
+    printf "│%s%*s%s│\n" "$titulo" "$espacos" "" "$contagem"
+
+    echo "$MEIO"
+    printf "│  ST  │ %-*s│%s│ %s│\n" "$LARG_TAREFA" "TAREFA" \
+        "$(centralizar "PRIORIDADE" $((LARG_PRIORIDADE+1)))" \
+        "$(centralizar "PRAZO" $LARG_PRAZO)"
+    echo "$MEIO"
+
+    local i ID STATUS PRIOR DESC PRAZO PONTEIRO col_st texto_tarefa texto_prior texto_prazo cor_prior
+    for (( i=0; i<total; i++ )); do
+        ID="${IDS[$i]}"; STATUS="${STATUS_LIST[$i]}"; PRIOR="${PRIORIDADE_LIST[$i]}"
+        DESC="${DESCRICOES[$i]}"; PRAZO="${PRAZO_LIST[$i]}"
+
+        status_info "$STATUS"
+        [[ $i -eq $SEL ]] && PONTEIRO="❯" || PONTEIRO=" "
+        col_st=$(preencher_direita "$PONTEIRO $SIMBOLO" 6)
+
+        texto_tarefa=$(truncar_esq "$(printf '#%02d %s' "$ID" "$DESC")" "$LARG_TAREFA")
+        texto_prior=$(centralizar "$PRIOR" "$LARG_PRIORIDADE")
+
+        if [[ "$STATUS" == "CONCLUIDA" ]]; then
+            texto_prazo=$(centralizar "Concl." "$LARG_PRAZO")
+        else
+            texto_prazo=$(centralizar "${PRAZO:-\-}" "$LARG_PRAZO")
+        fi
+
+        case "$PRIOR" in
+            ALTA)  cor_prior="$COR_VERMELHO" ;;
+            MEDIA) cor_prior="$COR_AMARELO" ;;
+            BAIXA) cor_prior="$COR_AZUL" ;;
+            *)     cor_prior="$RESET" ;;
+        esac
+
+        if (( i == SEL )); then
+            echo -e "│${COR_SEL}${col_st}${RESET}   │ ${texto_tarefa}│${cor_prior}${texto_prior}${RESET} │ ${texto_prazo}│"
+        else
+            echo -e "│${COR_STATUS}${col_st}${RESET}│ ${texto_tarefa}│${cor_prior}${texto_prior}${RESET} │ ${texto_prazo}│"
+        fi
+    done
+
+    echo "$BASE"
+    echo
+    echo "↑ ↓ navegar   ← → status   + adicionar   d excluir   BACKSPACE voltar"
+}
+
+# --------------------- Carregamento dos dados ---------------------
+
+carregar_tarefas() {
+    IDS=(); STATUS_LIST=(); PRIORIDADE_LIST=(); DESCRICOES=(); PRAZO_LIST=()
+    [[ -s "$ARQ_AFAZERES" ]] || return
+    local ID STATUS PRIORIDADE DESC PRAZO
+    while IFS="|" read -r ID STATUS PRIORIDADE DESC PRAZO || [[ -n "$ID" ]]; do
+        ID=$(echo "$ID" | tr -d '\r')
+        [[ -z "$ID" ]] && continue
+        IDS+=("$ID")
+        STATUS_LIST+=("$(echo "$STATUS" | tr -d '\r')")
+        PRIORIDADE_LIST+=("$(echo "$PRIORIDADE" | tr -d '\r')")
+        DESCRICOES+=("$(echo "$DESC" | tr -d '\r')")
+        PRAZO_LIST+=("$(echo "$PRAZO" | tr -d '\r')")
+    done < "$ARQ_AFAZERES"
+}
+
+salvar_status() {
+    # salvar_status <id> <novo_status>
+    local id="$1" novo="$2" tmp
+    tmp=$(mktemp)
+    awk -F'|' -v id="$id" -v status="$novo" 'BEGIN{OFS="|"} { if ($1==id) $2=status; print }' \
+        "$ARQ_AFAZERES" > "$tmp"
+    mv "$tmp" "$ARQ_AFAZERES"
+}
+
+excluir_tarefa() {
+    local id="$1" tmp
+    tmp=$(mktemp)
+    awk -F'|' -v id="$id" '$1 != id' "$ARQ_AFAZERES" > "$tmp"
+    mv "$tmp" "$ARQ_AFAZERES"
+}
+
+# --------------------- Tela principal (substitui ls_tarefas) ---------------------
+
+ls_tarefas() {
+    local IDS STATUS_LIST PRIORIDADE_LIST DESCRICOES PRAZO_LIST SEL=0 tecla total
+
+    while true; do
+        carregar_tarefas
+        total=${#IDS[@]}
+
+        if (( total == 0 )); then
+            clear
+            echo "Nenhuma tarefa cadastrada"
+            echo
+            echo "+ adicionar   BACKSPACE voltar"
+            tecla=$(ler_tecla)
+            case "$tecla" in
+                MAIS) add_tarefa ;;
+                BACKSPACE) return ;;
+            esac
+            continue
+        fi
+
+        (( SEL >= total )) && SEL=$(( total - 1 ))
+        (( SEL < 0 )) && SEL=0
+
+        desenhar_tabela
+        tecla=$(ler_tecla)
+
+        case "$tecla" in
+            CIMA)
+                SEL=$(( SEL - 1 ))
+                (( SEL < 0 )) && SEL=$(( total - 1 ))
+                ;;
+            BAIXO)
+                SEL=$(( SEL + 1 ))
+                (( SEL >= total )) && SEL=0
+                ;;
+            DIREITA)
+                salvar_status "${IDS[$SEL]}" "$(proximo_status "${STATUS_LIST[$SEL]}")"
+                ;;
+            ESQUERDA)
+                salvar_status "${IDS[$SEL]}" "$(status_anterior "${STATUS_LIST[$SEL]}")"
+                ;;
+            MAIS)
+                add_tarefa
+                ;;
+            DEL)
+                echo
+                read -rp "Excluir a tarefa '${DESCRICOES[$SEL]}'? [s/N]: " CONF
+                [[ "$CONF" =~ ^[sS]$ ]] && excluir_tarefa "${IDS[$SEL]}"
+                ;;
+            BACKSPACE)
+                return
+                ;;
+        esac
+    done
+}
+
+# --------------------- Adicionar tarefa (agora com PRAZO) ---------------------
+
 add_tarefa() {
     clear
     echo "========================================"
@@ -871,31 +1140,24 @@ add_tarefa() {
     echo "========================================"
     echo
 
-    local DESCRICAO ID OPCOES_PRIORIDADE PRIORIDADE
+    local DESCRICAO ID OPCOES_PRIORIDADE PRIORIDADE PRAZO
 
     read -e -rp "Breve descrição da tarefa: " DESCRICAO
-
     if [[ -z "$DESCRICAO" ]]; then
-        echo
-        echo "A descrição não pode estar vazia"
-        read -rp "Pressione ENTER para voltar..."
+        echo; echo "A descrição não pode estar vazia"
+        read -rp "Press ENTER "
         return
     fi
 
     OPCOES_PRIORIDADE=("Alta" "Média" "Baixa")
     selecionar_menu "${OPCOES_PRIORIDADE[@]}"
-
-
     case $? in
         0) PRIORIDADE="ALTA" ;;
         1) PRIORIDADE="MEDIA" ;;
         2) PRIORIDADE="BAIXA" ;;
     esac
 
-    echo
-    echo "Defina o nível de prioridade para esta tarefa"
-    echo
-
+    read -e -rp "Prazo (ex: Hoje, Amanhã, 20/09 — ENTER para nenhum): " PRAZO
 
     if [[ ! -s "$ARQ_AFAZERES" ]]; then
         ID=1
@@ -904,129 +1166,27 @@ add_tarefa() {
         ID=$((ID + 1))
     fi
 
-    echo "$ID|ABERTA|$PRIORIDADE|$DESCRICAO" >> "$ARQ_AFAZERES"
+    echo "$ID|ABERTA|$PRIORIDADE|$DESCRICAO|$PRAZO" >> "$ARQ_AFAZERES"
 
-    echo
-    echo "Tarefa adicionada com sucesso!"
-    read -rp "Pressione ENTER para voltar... "
+    echo; echo "Tarefa adicionada com sucesso!"; echo
+    read -rp "Press ENTER  "
 }
 
-ls_tarefas() {
-    # declaração segura fora do loop
-    local OPCOES IDS STATUS_LIST PRIORIDADE_LIST DESCRICOES ID STATUS PRIORIDADES DESC
-    local COR_VERDE="\e[38;5;46m" COR_AMARELO="\e[38;2;255;255;0m" COR_VERMELHO="\e[38;2;255;0;0m" RESET="\e[0m" COR_AZUL="\e[38;2;0;191;255m"
+# --------------------- Menu de tarefas (inalterado) ---------------------
 
+menu_tarefas() {
     while true; do
-        clear
-        echo "========================================"
-        echo "            LISTA DE TAREFAS"
-        echo "========================================"
-        echo
-
-        if [[ ! -s "$ARQ_AFAZERES" ]]; then
-            echo
-            echo "Nenhuma tarefa cadastrada"
-            echo
-            read -rp "Pressione ENTER para voltar..."
-            return
-        fi
-
-        # zera os arrays a cada volta para evitar itens "fantasmas"
-        OPCOES=()
-        IDS=()
-        STATUS_LIST=()
-        PRIORIDADE_LIST=()
-        DESCRICOES=()
-
-        # monta a visualização limpando qualquer caractere de controle do sistema
-        while IFS="|" read -r ID STATUS PRIORIDADE DESC || [[ -n "$ID" ]]; do
-            # remove espaços vazios acidentais e quebras de linha invisíveis
-            ID=$(echo "$ID" | tr -d '\r')
-            STATUS=$(echo "$STATUS" | tr -d '\r')
-            PRIORIDADE=$(echo "$PRIORIDADE" | tr -d '\r')
-            DESC=$(echo "$DESC" | tr -d '\r')
-            # pula linhas vazias que poderiam quebrar o alinhamento do menu
-            if [[ -z "$ID" ]]; then continue; fi
-
-            local COR_PRIORIDADE=""
-            case "$PRIORIDADE" in
-                ALTA) COR_PRIORIDADE="$COR_VERMELHO" ;;
-                MEDIA) COR_PRIORIDADE="$COR_AMARELO" ;;
-                BAIXA) COR_PRIORIDADE="$COR_AZUL" ;;
-            esac
-
-            if [[ "$STATUS" == "ABERTA" ]]; then
-                OPCOES+=("[ ] $(echo -e "${COR_PRIORIDADE}[$PRIORIDADE]${RESET}") $DESC")
-            else
-                OPCOES+=("[X] $(echo -e "${COR_VERDE}[CONCLUÍDA]${RESET}") $DESC")
-            fi
-            IDS+=("$ID")
-            STATUS_LIST+=("$STATUS")
-            PRIORIDADE_LIST+=("$PRIORIDADE")
-            DESCRICOES+=("$DESC")
-        done < "$ARQ_AFAZERES"
-
-        OPCOES+=("Voltar")
-
-        HABILITAR_DEL=1
+        local OPCOES=("Adicionar tarefa" "Listar tarefas")
         selecionar_menu "${OPCOES[@]}"
-        local ESCOLHA=$?
-
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} -1 )) ]]; then
-            break
-        fi
-
-        local ID_SELECIONADO="${IDS[$ESCOLHA]}"
-        local DESC_SELECIONADA="${DESCRICOES[$ESCOLHA]}"
-
-        # lógica do DEL para remover
-        if [[ "$ACAO_MENU" == "DEL" ]]; then
-            echo
-            # confirmação de exclusão com nome da tarefa
-            read -rp "Tem certeza que deseja EXCLUIR a tarefa '${DESC_SELECIONADA}'? [s/N]: " CONFIRMACAO
-            if [[ "$CONFIRMACAO" =~ ^[sS]$ ]]; then
-                local TEMP_TAR
-                TEMP_TAR=$(mktemp)
-                awk -F '|' -v id="$ID_SELECIONADO" '$1 != id {print $0}' "$ARQ_AFAZERES" > "$TEMP_TAR"
-                mv "$TEMP_TAR" "$ARQ_AFAZERES"
-            fi
-        # lógica do enter para alterar status da tarefa
-        elif [[ "$ACAO_MENU" == "ENTER" ]]; then
-            local NOVO_STATUS="CONCLUIDA"
-            if [[ "${STATUS_LIST[$ESCOLHA]}" == "CONCLUIDA" ]]; then
-                NOVO_STATUS="ABERTA"
-            fi
-
-            local TEMP_TAR
-            TEMP_TAR=$(mktemp)
-            awk -F'|' -v id="$ID_SELECIONADO" -v status="$NOVO_STATUS" 'BEGIN {OFS="|"} {
-                if ($1 == id) $2 = status; print $0
-            }' "$ARQ_AFAZERES" > "$TEMP_TAR"
-            mv "$TEMP_TAR" "$ARQ_AFAZERES"
-        fi
-    done
-}
-
-menu_tarefas(){
-    while true; do
-        local OPCOES=(
-            "Adicionar tarefa"
-            "Listar tarefas"
-            "Voltar"
-        )
-
-        selecionar_menu "${OPCOES[@]}"
-    
         local OPCAO=$?
+        [[ $OPCAO -eq 255 ]] && return
         case "$OPCAO" in
-        
             0) add_tarefa ;;
             1) ls_tarefas ;;
-            2) break ;;
-    
         esac
     done
 }
+
 
 # ==========================================
 # DIAGNÓSTICOS
@@ -1044,7 +1204,7 @@ add_diagnostico(){
     if [[ -z "$TITULO" ]]; then
         echo
         echo "O título não pode estar vazio"
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER "
         sleep 1
         return
     fi    
@@ -1063,10 +1223,7 @@ add_diagnostico(){
 
     clear
     echo "==============================================================="
-    echo "Abrindo editor para preencher o diagnóstico"
-    echo "Preencha abaixo de cada seção (NÃO apague os títulos com '===')"
-    echo "Ctrl+O para salvar, Ctrl+X para sair"
-    read -rp "Pressione ENTER para continuar..."
+    read -rp "Press ENTER para abrir o nano"
     
     CONTINUAR="sim"
     while [[ "$CONTINUAR" == "sim" ]]; do
@@ -1083,7 +1240,8 @@ add_diagnostico(){
                 rm -f "$TEMP_DIAG"
                 echo
                 echo "Diagnóstico descartado"
-                read -rp "Pressione ENTER para voltar..."
+                echo
+                read -rp "Press ENTER"
                 return
             fi
             continue
@@ -1106,7 +1264,8 @@ add_diagnostico(){
                 rm -f "$TEMP_DIAG"
                 echo
                 echo "Diagnóstico descartado"
-                read -rp "Pressione ENTER para voltar..."
+                echo
+                read -rp "Press ENTER"
                 return
             fi
         fi
@@ -1129,9 +1288,10 @@ add_diagnostico(){
     cat "$CABECALHO" >> "$ARQ_DIAGNOSTICOS"
     rm -f "$TEMP_DIAG" "$CABECALHO"
 
+    clear
     echo
     echo "Diagnóstico salvo com sucesso!"
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER "
     clear
 }
 
@@ -1149,7 +1309,7 @@ abrir_diagnostico(){
         if [[ ! -s "$ARQ_DIAGNOSTICOS" ]]; then
             echo "Nenhum diagnóstico cadastrado"
             echo
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER "
             return
         fi
         
@@ -1172,15 +1332,13 @@ abrir_diagnostico(){
                 BLOCO_ATUAL+="$LINHA"$'\n'
             fi
         done < "$ARQ_DIAGNOSTICOS"
-        
-        OPCOES+=("Voltar")
 
         HABILITAR_DEL=1
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
-        if [[ $ESCOLHA -eq $(( ${#OPCOES[@]} - 1 )) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
         
         local TITULO_SELECIONADO="${TITULOS_ARR[$ESCOLHA]}"
@@ -1210,7 +1368,7 @@ abrir_diagnostico(){
         printf "%s" "${BLOCOS[$ESCOLHA]}"
         echo
         echo "==================================="
-        read -rp "Pressione ENTER para voltar à lista..."
+        read -rp "Press ENTER para voltar à lista..."
     done
 }
 
@@ -1226,7 +1384,7 @@ ls_diagnostico(){
     fi
 
     echo
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER "
     clear
 }
 
@@ -1238,17 +1396,20 @@ menu_diagnosticos(){
             "Adicionar diagnóstico"
             "Abrir diagnóstico"
             "Listar diagnósticos"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
         
         local OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
         case $OPCAO in
             0) add_diagnostico ;;
             1) abrir_diagnostico ;;
             2) ls_diagnostico ;;
-            3) break ;;
         esac
     done
 }
@@ -1275,8 +1436,10 @@ exibir_log_arquivo() {
     if [[ ! -f "$CAMINHO" ]]; then
         echo
         echo "[ ERRO ] Log não encontrado em: $CAMINHO"
+        echo
         echo "Confirme se o caminho está correto"
-        read -rp "Pressione ENTER para voltar..."
+        echo
+        read -rp "Press ENTER"
         return
     fi
 
@@ -1285,14 +1448,14 @@ exibir_log_arquivo() {
     if [[ "$OPCAO" =~ ^[sS]$ ]]; then
         clear
         echo "Pressione Ctrl+C para sair do acompanhamento em tempo real"
-        read -rp "Pressione ENTER para continuar..."
+        read -rp "Press ENTER para continuar..."
         tail -fn 30 "$CAMINHO"
     else
         LINHAS=$(perguntar_linhas)
         clear
         tail -n "$LINHAS" "$CAMINHO"
         echo
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER"
     fi
 }
 
@@ -1304,14 +1467,14 @@ exibir_log_journalctl() {
     if [[ "$OPCAO" =~ ^[sS]$ ]]; then
         clear
         echo "Pressione Ctrl+C para sair do acompanhamento em tempo real"
-        read -rp "Pressione ENTER para continuar..."
+        read -rp "Press ENTER para continuar..."
         sudo journalctl -u "$UNIT" -fn 30
     else
         LINHAS=$(perguntar_linhas)
         clear
         sudo journalctl -u "$UNIT" -n "$LINHAS"
         echo
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER"
     fi
 }
 
@@ -1325,11 +1488,14 @@ menu_script() {
         OPCOES=(
             "Ver último log"
             "Executar agora"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
+        
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
 
         case $ESCOLHA in
             0) exibir_log_arquivo "$CAMINHO_LOG" ;;
@@ -1337,8 +1503,7 @@ menu_script() {
                 clear
                 (sudo "$CAMINHO_SCRIPT")
                 echo
-                read -rp "Pressione ENTER para voltar..." ;;
-            2) break ;;
+                read -rp "Press ENTER" ;;
         esac
     done
 }
@@ -1354,17 +1519,20 @@ menu_scripts() {
             "Limpeza"
             "Storage"
             "Monitoramento"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
         
         local ESCOLHA="$?"
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi 
+
         case $ESCOLHA in
             0) menu_script "LIMPEZA" "/var/log/limpeza/limpeza-atual.log" "/scripts/auto-remove.sh" ;;
             1) menu_script "STORAGE" "/var/log/backupsamba/COLOCAR CAMINHO CERTO" "/scripts/storage.sh" ;;
             2) menu_script "MONITORAMENTO" "/var/log/minipc-monitoring/ultimo-monitoramento.log" "/scripts/monitoramento.sh" ;;
-            3) break ;;
         esac
     done
 }
@@ -1378,15 +1546,18 @@ menu_gotify() {
 
         OPCOES=(
             "Journalctl"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
 
         local ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
         case $ESCOLHA in
             0) exibir_log_journalctl "gotify" ;;
-            1) break ;;
         esac
     done
 }
@@ -1401,7 +1572,7 @@ ls_logs_samba() {
         if ! ls /var/log/samba/*.log >/dev/null 2>&1 && ! ls /var/log/samba/log.* >/dev/null 2>&1; then
             echo "Nenhum arquivo de log encontrado em /var/log/samba/"
             echo
-            read -rp "Pressione ENTER para voltar..."
+            read -rp "Press ENTER "
             return
         fi
 
@@ -1414,13 +1585,12 @@ ls_logs_samba() {
             ARQUIVOS_ENCONTRADOS+=("$NOME_ARQUIVO")
         done < <(find /var/log/samba -maxdepth 1 -type f | sort)
 
-        OPCOES+=("Voltar")
         selecionar_menu "${OPCOES[@]}"
 
         ESCOLHA=$?
 
-        if [[ "$ESCOLHA" -eq $((${#OPCOES[@]} - 1 )) ]]; then
-            break
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         exibir_log_arquivo "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
@@ -1437,16 +1607,19 @@ menu_samba() {
         OPCOES=(
             "Journalctl"
             "Arquivo de log"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
         
         local ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
         case "$ESCOLHA" in
             0) exibir_log_journalctl "smbd" ;;
             1) ls_logs_samba ;;
-            2) break ;;
         esac
     done
 }
@@ -1474,7 +1647,7 @@ status_fail2ban() {
         echo
     done
 
-    read -rp "Pressione ENTER para voltar..."
+    read -rp "Press ENTER"
 }
 
 menu_fail2ban() {
@@ -1489,17 +1662,20 @@ menu_fail2ban() {
             "Journalctl"
             "Arquivo de log"
             "Status (jails e IPs banidos)"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
 
         local ESCOLHA="$?"
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
         case "$ESCOLHA" in
             0) exibir_log_journalctl "fail2ban" ;;
             1) exibir_log_arquivo "/var/log/fail2ban.log" ;;
             2) status_fail2ban ;;
-            3) break ;;
         esac
     done
 }
@@ -1514,18 +1690,21 @@ menu_logs(){
             "Samba"
             "Fail2ban"
             "Gotify"
-            "Voltar"
         )
         
         selecionar_menu "${OPCOES[@]}"
         
         local ESCOLHA="$?"
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
         case $ESCOLHA in
             0) menu_scripts ;;
             1) menu_samba ;;
             2) menu_fail2ban ;;
             3) menu_gotify ;;
-            4) break ;;
         esac
     done
 }
@@ -1614,7 +1793,7 @@ gerar_feedback() {
     echo
     echo "Bom descanso a todos! 🧬"
     echo
-    read -rp "Pressione ENTER para voltar ao menu..."
+    read -rp "Press ENTER para voltar ao menu..."
 }
 
 editar_feedback() {
@@ -1626,7 +1805,7 @@ editar_feedback() {
     if [[ ! -f "$ARQ_FEEDBACK_USUARIO" ]]; then
         echo
         echo "Ainda não existe um feedback para editar."
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER "
         return
     fi
 
@@ -1673,12 +1852,12 @@ enviar_feedback_wpp() {
             ARQUIVOS_ENCONTRADOS+=("$NOME_ARQUIVO")
         done < <(find "$DIR_FEEDBACK" -maxdepth 1 -type f -name "feedback-*.txt" | sort)
 
-        OPCOES+=("Voltar")
         selecionar_menu "${OPCOES[@]}"
         
         ESCOLHA="$?"
-        if [[ "$ESCOLHA" -eq $(( ${#OPCOES[@]} - 1 )) ]]; then
-            break
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
         fi
 
         CONTEUDO_FEEDBACK=$(grep -vE '^(DATA|USUARIO): ' "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}" | sed '/./,$!d')
@@ -1692,7 +1871,7 @@ enviar_feedback_wpp() {
         echo "=============================================================="
         echo "OBS: o WhatsApp pode não exibir o emoji corretamente — limitação do lado de lá, já confirmada"
         echo
-        read -rp "Pressione ENTER para gerar o link e abrir no WhatsApp..."
+        read -rp "Press ENTER para gerar o link e abrir no WhatsApp..."
 
         TEXTO_CODIFICADO=$(url_encode "$CONTEUDO_FEEDBACK")
         LINK_GRUPO="https://wa.me/?text=${TEXTO_CODIFICADO}"
@@ -1707,7 +1886,7 @@ enviar_feedback_wpp() {
 
         xdg-open "$LINK_GRUPO" >/dev/null 2>&1 &
 
-        read -rp "Pressione ENTER para voltar..."
+        read -rp "Press ENTER"
     done
 }
 
@@ -1720,17 +1899,20 @@ menu_feedback() {
             "Gerar feedback"
             "Editar feedback"
             "Enviar feedback via WhatsApp"
-            "Voltar"
         )
 
         selecionar_menu "${OPCOES[@]}"
         
         local ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
         case "$ESCOLHA" in
             0) gerar_feedback ;;
             1) editar_feedback ;;
             2) enviar_feedback_wpp ;;
-            3) break ;;
         esac
     done
 }
@@ -1748,27 +1930,29 @@ while true; do
         "Turnos"
         "Registrar atividade"
         "Artigos"
-        "Estudos"
+        "Explicações"
         "Tarefas"
         "Diagnósticos"
         "Logs"
         "Feedback"
-        "Sair"
     )
 
     selecionar_menu "${OPCOES[@]}"
     OPCAO=$?
+
+    if [[ $OPCAO -eq 255 ]]; then
+        clear; break
+    fi
 
     case $OPCAO in
         0) menu_turnos ;;
         1) registrar_atividade ;;
         2) menu_artigos ;;
         3) menu_estudos ;;
-        4) menu_tarefas;;
+        4) ls_tarefas ;;
         5) menu_diagnosticos ;;
         6) menu_logs ;;
         7) menu_feedback ;;
-        8) clear ; exit 0 ;;
     esac
 
 done
