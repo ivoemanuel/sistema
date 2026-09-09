@@ -4,6 +4,7 @@
 # ==========================================
 
 gerar_feedback() {
+
     echo
     echo "========== FEEDBACK =========="
     echo
@@ -12,43 +13,47 @@ gerar_feedback() {
         echo "Não existe registro para hoje."
         return
     fi
-
-    local ADICIONAR ADICIONAL LINHA TEMP USUARIO_LOWER ARQ_FEEDBACK_USUARIO NOME_EXIBICAO
-
+    
+    local USUARIO_LOWER ARQ_FEEDBACK_USUARIO
     USUARIO_LOWER=$(echo "$USUARIO" | tr '[:upper:]' '[:lower:]' )
     ARQ_FEEDBACK_USUARIO="$DIR_FEEDBACK/feedback-${USUARIO_LOWER}.txt"
 
-    NOME_EXIBICAO=$(awk -F'=' -v u="$USUARIO" '$1 == u {print $2}' "$ARQ_USUARIOS")
-    if [[ -z "$NOME_EXIBICAO" ]]; then
-        NOME_EXIBICAO="$USUARIO"
+    # Verifica se já existe um feedback de hoje
+    if [[ ! -f "$ARQ_FEEDBACK_USUARIO" ]] || ! grep -q "^DATA: $DATA$" "$ARQ_FEEDBACK_USUARIO"; then
+
+        {
+            echo "DATA: $DATA"
+            echo "USUARIO: $USUARIO"
+            echo
+            echo "Boa noite, pessoal! Segue o feedback do dia de hoje: ($DATA)"
+            echo
+
+            grep '| S |' "$ARQUIVO" | while IFS='|' read -r HORA CATEGORIA MARCADOR ATIVIDADE; do
+                ATIVIDADE=$(echo "$ATIVIDADE" | sed 's/^ *//')
+                echo "- $ATIVIDADE"
+            done
+
+            echo
+            echo "Bom descanso a todos! 🧬"
+
+        } > "$ARQ_FEEDBACK_USUARIO"
     fi
 
-    {
-        echo "Boa noite, pessoal! Segue o feedback do dia de hoje: ($DATA) - $NOME_EXIBICAO"
-        echo
-
-        awk -F'|' -v usr="$USUARIO" '$3 ~ /S/ {
-            gsub(/^[ \t]+|[ \t]+$/, "", $4)
-            if ($4 == usr) {
-                ativ = $5
-                gsub(/^[ \t]+/, "", ativ)
-                print "- " ativ
-            }
-        }' "$ARQUIVO"
-        echo
-        echo "Bom descanso a todos, até amanhã! 🧬"
-    } > "$ARQ_FEEDBACK_USUARIO"
-
     while true; do
+
         clear
+
         echo "========== FEEDBACK =========="
         echo
         cat "$ARQ_FEEDBACK_USUARIO"
         echo
 
-        read -p "Deseja adicionar algo ao feedback? [s/N]: " ADICIONAR
+        read -rp "Deseja adicionar algo ao feedback? [s/N]: " ADICIONAR
+
         if [[ "$ADICIONAR" =~ ^[Ss]$ ]]; then
+
             clear
+
             echo
             echo "Digite o que deseja adicionar."
             echo "Digite FIM em uma linha separada quando terminar."
@@ -58,6 +63,7 @@ gerar_feedback() {
 
             while true; do
                 read -r LINHA
+
                 if [[ "$LINHA" == "FIM" ]]; then
                     break
                 fi
@@ -66,48 +72,57 @@ gerar_feedback() {
             done
 
             if [[ -n "${ADICIONAL//[$'\n\r ']/}" ]]; then
+
                 TEMP=$(mktemp)
 
-                # remove a frase final e a linha vazia anterior
+                # Remove a frase final e a linha vazia anterior
                 sed '$d' "$ARQ_FEEDBACK_USUARIO" | sed '$d' > "$TEMP"
 
-                # add cada linha como um novo item
+                # Adiciona cada linha como um novo item
                 while IFS= read -r LINHA; do
                     if [[ -n "${LINHA//[$'\r ']/}" ]]; then
                         echo "- $LINHA" >> "$TEMP"
                     fi
                 done <<< "$ADICIONAL"
 
-                # add novamente a frase final
+                # Adiciona novamente a frase final
                 echo >> "$TEMP"
                 echo "Bom descanso a todos! 🧬" >> "$TEMP"
 
                 mv "$TEMP" "$ARQ_FEEDBACK_USUARIO"
             fi
+
             continue
         fi
+
         break
+
     done
+
     clear
-    echo "========== FEEDBACK $DATA $NOME_EXIBICAO =========="
+
+    echo "========== FEEDBACK =========="
     echo
     cat "$ARQ_FEEDBACK_USUARIO"
+
     echo
-    read -p "Pressione ENTER para voltar ao menu..."
-}               
+    read -rp "Pressione ENTER para voltar ao menu..."
+}
+
 
 editar_feedback() {
-    local USUARIO_LOWER ARQ_FEEDBACK_USUARIO
 
-    USUARIO_LOWER=$(echo "$USUARIO" | tr '[:upper:]' '[:lower:]')
+    local USUARIO_LOWER ARQ_FEEDBACK_USUARIO
+    USUARIO_LOWER=$(echo "$USUARIO" | tr '[:upper:]' '[:lower:]' )
     ARQ_FEEDBACK_USUARIO="$DIR_FEEDBACK/feedback-${USUARIO_LOWER}.txt"
 
     if [[ ! -f "$ARQ_FEEDBACK_USUARIO" ]]; then
         echo
         echo "Ainda não existe um feedback para editar."
-        read -p "Pressione ENTER para voltar..."
+        read -rp "Pressione ENTER para voltar..."
         return
     fi
+
     nano "$ARQ_FEEDBACK_USUARIO"
 }
 

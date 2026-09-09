@@ -18,33 +18,10 @@ HORA=$(date '+%H:%M')
 
 ARQUIVO="$PASTA/$DATA.txt"
 
-# ==============================================================================
-#                                   SELECIONAR
-# ==============================================================================
-# TABELA DE REFERÊNCIA DE CORES ANSI PARA TERMINAL LINUX
-# Uso: \e[ESTILO;TEXTO;FUNDOm  (Terminar sempre com \e[0m)
-# Exemplo: echo -e "\e[1;32;44m Texto \e[0m" (Negrito, Texto Verde, Fundo Azul)
-# ==============================================================================
-# ESTILOS:
-# 0 = Reset/Normal  |  1 = Negrito (Bold)  |  4 = Sublinhado  |  7 = Invertido
-# ------------------------------------------------------------------------------
-# CORES DE TEXTO (Foreground)         | CORES DE FUNDO (Background)
-# 30 / 90 = Preto (Normal / Brilhante)| 40 / 100 = Preto
-# 31 / 91 = Vermelho                  | 41 / 101 = Vermelho
-# 32 / 92 = Verde                     | 42 / 102 = Verde
-# 33 / 93 = Amarelo                   | 43 / 103 = Amarelo
-# 34 / 94 = Azul                      | 44 / 104 = Azul
-# 35 / 95 = Magenta / Roxo            | 45 / 105 = Magenta / Roxo
-# 36 / 96 = Ciano / Azul Claro        | 46 / 106 = Ciano / Azul Claro
-# 37 / 97 = Branco / Cinza            | 47 / 107 = Branco / Cinza
-# ==============================================================================
-
 selecionar_menu() {
-    local COR_DESTAQUE="\e[44;97;1m" 
-    local RESET="\e[0m"
+    local COR_DESTAQUE="\e[48;2;138;43;226m" RESET="\e[0m" 
     local OPCOES=("$@")
-    local SELECIONADO=0
-    local TECLA
+    local SELECIONADO=0 TECLA
 
     while true; do
         clear

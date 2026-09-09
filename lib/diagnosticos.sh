@@ -48,7 +48,7 @@ add_diagnostico(){
         ! grep -qF "=========== SOLUÇÃO ============" "$TEMP_DIAG"; then
             echo
             read -rp "Uma ou mais seções foram removidas ou alteradas, deseja reabrir o editor para corrigir? [s/N]: " CORRIGIR
-            if [[ ! "$CORRIGIR" =~ ^[nN]$ ]]; then
+            if [[ ! "$CORRIGIR" =~ ^[sS]$ ]]; then
                 CONTINUAR="sim"
             else
                 rm -f "$TEMP_DIAG"
