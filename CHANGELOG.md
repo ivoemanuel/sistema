@@ -5,6 +5,22 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.1.0] - 2026-09-09
+
+### Adicionado
+- Nova pasta `scripts/` criada especificamente para isolar a inteligência de infraestrutura.
+- `utils/shellRunner.js`: Módulo wrapper utilizando `child_process` para invocar os scripts em Shell de forma isolada.
+- `routes/shellRoutes.js`: Endpoints do Express dedicados a receber os gatilhos para as automações.
+- `controllers/shellController.js`: Lógica de negócio que valida requisições antes de acionar o terminal.
+
+### Modificado
+- `README.md`: Atualizado para refletir a nova arquitetura híbrida (Node.js + Shell) e documentar os scripts reais utilizados.
+- Arquivos `sistema.sh`, `turnos.sh` e o backup `sistema.sh.bkp` foram movidos da raiz do projeto para dentro da nova pasta `scripts/`, organizando a estrutura.
+- **Overhaul de UX/UI:** Refatoração do `style.css` e dos templates `.hbs` para um design system "Tech" (Ciano `#2596be` e fundos escuros `#1a1a1a` / `#2b2b2b`).
+- Layout do Dashboard migrado para CSS Grid, distribuindo widgets na tela inicial.
+
+---
+
 ## [1.0.0] - 2026-09-03
 
 ### Adicionado
@@ -43,7 +59,6 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - `public/js/dashboard.js`: barra de ferramentas do editor de texto rico (negrito, itálico, sublinhado, lista).
 - `public/js/calendar.js`: renderização e navegação do calendário mensal, com destaque dos dias preenchidos.
 - `public/js/notes.js`: CRUD de notas pessoais via `fetch`, sem recarregar a página.
-- `public/css/style.css`: design system completo com a paleta de cores do DNA Feed (roxo profundo como cor primária, ciano vibrante como destaque, neutros para fundo/conteúdo), responsivo para telas menores.
 
 #### Documentação
 - `README.md` com arquitetura, modelo de dados, instruções de instalação e considerações de segurança.
@@ -53,4 +68,5 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - Todas as queries SQL parametrizadas para prevenir SQL Injection.
 - Controle de acesso reforçado a nível de controller (usuário comum não acessa feedback de terceiros, mesmo manipulando a URL).
 
+[1.1.0]: #
 [1.0.0]: #
