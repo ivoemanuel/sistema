@@ -1,0 +1,13 @@
+=========================================
+            PASSO A PASSO
+=========================================
+
+TÍTULO: Sistema de turnos
+DESCRIÇÂO: Como utilizar o sistema
+DATA: 10-09-2026
+
+=========================================
+
+- abra o terminal
+- va para o diretório que está o script
+- digite ./sistema.sh

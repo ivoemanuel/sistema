@@ -13,6 +13,7 @@ DIR_AFAZERES="$RAIZ/afazeres"
 DIR_FEEDBACK="$RAIZ/feedback"
 DIR_CHEATSHEET="$RAIZ/cheat-sheet"
 DIR_IPS="$RAIZ/ips"
+DIR_INSTRUCOES="$RAIZ/instrucoes"
 
 ARQ_ARTIGOS="$DIR_ARTIGOS/artigos.txt"
 ARQ_DIAGNOSTICOS="$DIR_DIAGNOSTICOS/diagnosticos.txt"
@@ -20,6 +21,7 @@ ARQ_AFAZERES="$DIR_AFAZERES/afazeres.txt"
 ARQ_USUARIOS="$DIR_FEEDBACK/usuarios.txt"
 ARQ_CHEATSHEET="$DIR_CHEATSHEET/comandos.txt"
 ARQ_IPS="$DIR_IPS/ips.txt"
+ARQ_VIZINHOS="$DIR_IPS/vizinhos.txt"
 
 SEPARADOR_DIAGNOSTICO="###FIM_DIAGNOSTICO###"
 
@@ -45,6 +47,7 @@ verificar_estrutura() {
     mkdir -p "$DIR_FEEDBACK"
     mkdir -p "$DIR_CHEATSHEET"
     mkdir -p "$DIR_IPS"
+    mkdir -p "$DIR_INSTRUCOES"
     # Arquivos
     touch "$ARQ_ARTIGOS"
     touch "$ARQ_AFAZERES"
@@ -86,19 +89,23 @@ selecionar_menu() {
             fi
         done
 
-        if [[ "$HABILITAR_DEL" == "1" ]]; then
-            echo
-            echo "↑ ↓ navegar | ENTER selecionar | DEL remover | BACKSPACE voltar"
-        else
-            echo
-            echo "↑ ↓ navegar | ENTER selecionar | BACKSPACE voltar"
-        fi
+        dica="↑ ↓ navegar | ENTER selecionar | BACKSPACE voltar"
+        [[ "$HABILITAR_DEL" == "1" ]] && dica+=" | DEL remover"
+        [[ "$HABILITAR_ADD" == "1" ]] && dica+=" | + adicionar"
+        echo
+        echo -e "$dica"
 
         IFS= read -rsn1 TECLA
 
         # BACKSPACE
         if [[ "$TECLA" == $'\x7f' || "$TECLA" == $'\x08' ]]; then
             RETORNO=255
+            break
+        fi
+
+        # '+' (adicionar)
+        if [[ "$TECLA" == "+" && "$HABILITAR_ADD" == "1" ]]; then
+            RETORNO=254
             break
         fi
 
@@ -123,7 +130,7 @@ selecionar_menu() {
                             RETORNO=$SELECIONADO
                             break
                         fi
-                    fi
+                    fi 
                     ;;
             esac
         fi
@@ -138,11 +145,11 @@ selecionar_menu() {
 
     # Destrói os gatilhos globais antes de sair para não afetar menus subsequentes
     HABILITAR_DEL=0
+    HABILITAR_ADD=0
     MENSAGEM_MENU=""
 
     return "$RETORNO"
 }
-
 
 # ==========================================
 # CRIAR ARQUIVO DO DIA
@@ -197,6 +204,7 @@ mostrar_hoje() {
             echo "Nenhuma atividade registrada ainda hoje"
             echo
             read -rp "Press ENTER"
+            return
         fi
 
         HABILITAR_DEL=1
@@ -936,6 +944,36 @@ truncar_esq() {
     fi
 }
 
+calcular_larguras() {
+    local LC_ALL=C.utf8
+    local total=${#IDS[@]}
+    local i TEXTO LEN
+
+    LARG_TAREFA=6        # tamanho do cabeçalho "TAREFA"
+    LARG_PRIORIDADE=10   # tamanho do cabeçalho "PRIORIDADE"
+    LARG_PRAZO=5         # tamanho do cabeçalho "PRAZO"
+
+    for (( i = 0; i < total; i++ )); do
+        TEXTO=$(printf '#%02d %s' "${IDS[$i]}" "${DESCRICOES[$i]}")
+        LEN=${#TEXTO}
+        (( LEN > LARG_TAREFA )) && LARG_TAREFA=$LEN
+
+        LEN=${#PRIORIDADE_LIST[$i]}
+        (( LEN > LARG_PRIORIDADE )) && LARG_PRIORIDADE=$LEN
+
+        if [[ "${STATUS_LIST[$i]}" == "CONCLUIDA" ]]; then
+            LEN=6
+        else
+            LEN=${#PRAZO_LIST[$i]}
+        fi
+        (( LEN > LARG_PRAZO )) && LARG_PRAZO=$LEN
+    done
+
+    (( LARG_TAREFA < 20 )) && LARG_TAREFA=20
+    (( LARG_TAREFA > 60 )) && LARG_TAREFA=60
+    (( LARG_PRAZO < 7 )) && LARG_PRAZO=7
+}
+
 # Lê uma tecla (trata setas, backspace e enter)
 ler_tecla() {
     local tecla resto
@@ -992,6 +1030,8 @@ status_anterior() {
 # --------------------- Desenho da tabela ---------------------
 
 desenhar_tabela() {
+    calcular_larguras
+
     local total=${#IDS[@]}
     local TOPO MEIO BASE
     TOPO="┌──────┬$(repetir $((LARG_TAREFA+2)) ─)┬$(repetir $((LARG_PRIORIDADE+2)) ─)┬$(repetir $((LARG_PRAZO+2)) ─)┐"
@@ -1002,12 +1042,12 @@ desenhar_tabela() {
     clear
     echo "$TOPO"
 
-    # linha de título com contador [ x/total ]
     local titulo=" LISTA DE TAREFAS" contagem="[ $((SEL+1))/$total ] "
     local espacos=$(( largura_interna - ${#titulo} - ${#contagem} ))
     printf "│%s%*s%s│\n" "$titulo" "$espacos" "" "$contagem"
 
     echo "$MEIO"
+    # ALTERADO: padding simétrico (espaço dos dois lados) igual às linhas de dados
     printf "│  ST  │ %-*s │ %s │ %s │\n" "$LARG_TAREFA" "TAREFA" \
         "$(centralizar "PRIORIDADE" "$LARG_PRIORIDADE")" \
         "$(centralizar "PRAZO" "$LARG_PRAZO")"
@@ -1038,6 +1078,7 @@ desenhar_tabela() {
             *)     cor_prior="$RESET" ;;
         esac
 
+        # ALTERADO: removidos os 3 espaços extras da linha selecionada + padding simétrico igual nas duas variantes
         if (( i == SEL )); then
             echo -e "│${COR_SEL}${col_st}${RESET}│ ${texto_tarefa} │${cor_prior} ${texto_prior} ${RESET}│ ${texto_prazo} │"
         else
@@ -1771,28 +1812,35 @@ listar_conexoes_samba() {
         return
     fi
 
-    local IPS_CONECTADOS IP NOME_CATALOGO
+    local SAIDA_SMBSTATUS PIDS PID USUARIO IP DATA_CONEXAO LINHA_CONEXAO LINHA_SERVICO
 
-    IPS_CONECTADOS=$(sudo smbstatus 2>/dev/null | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | sort -u)
+    SAIDA_SMBSTATUS=$(sudo smbstatus 2>/dev/null)
 
-    if [[ -z "$IPS_CONECTADOS" ]]; then
+    # tabela de conexões: linhas que começam com um PID numérico
+    PIDS=$(echo "$SAIDA_SMBSTATUS" | awk '/^[0-9]+[[:space:]]/ {print $1}' | sort -u)
+
+    if [[ -z "$PIDS" ]]; then
         echo "Nenhuma conexão ativa no Samba no momento"
         echo
         read -rp "Press ENTER "
         return
     fi
 
-    while IFS= read -r IP; do
-        NOME_CATALOGO=""
-        if [[ -s "$ARQ_IPS" ]]; then
-            NOME_CATALOGO=$(awk -F'|' -v ip="$IP" '$3 == ip {print $2; exit}' "$ARQ_IPS")
-        fi
-        if [[ -n "$NOME_CATALOGO" ]]; then
-            echo "  $IP  —  $NOME_CATALOGO"
-        else
-            echo "  $IP  —  (não cadastrado no catálogo de IPs)"
-        fi
-    done <<< "$IPS_CONECTADOS"
+    printf "%-15s %-16s %-24s" "USUÁRIO" "        IP" " CONECTADO EM"
+    echo "-------------------------------------------------"
+
+    while IFS= read -r PID; do
+        LINHA_CONEXAO=$(echo "$SAIDA_SMBSTATUS" | awk -v pid="$PID" '$1 == pid {print; exit}')
+        USUARIO=$(echo "$LINHA_CONEXAO" | awk '{print $2}')
+        IP=$(echo "$LINHA_CONEXAO" | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -n 1)
+
+        # tabela de serviços: PID é o 2º campo aqui, e traz o "Connected at"
+        LINHA_SERVICO=$(echo "$SAIDA_SMBSTATUS" | awk -v pid="$PID" '$2 == pid {print; exit}')
+        DATA_CONEXAO=$(echo "$LINHA_SERVICO" | grep -oE '[A-Za-z]{3} [A-Za-z]{3}[[:space:]]+[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}')
+        [[ -z "$DATA_CONEXAO" ]] && DATA_CONEXAO="?"
+
+        printf "%-15s %-16s %-24s" "${USUARIO:-?}" "${IP:-?}" "$DATA_CONEXAO"
+    done <<< "$PIDS"
 
     echo
     read -rp "Press ENTER "
@@ -1869,6 +1917,79 @@ buscar_ip_octeto() {
     done
 }
 
+escanear_vizinhos() {
+    local LINHA IP MAC TEMP_VIZ
+
+    while IFS= read -r LINHA; do
+        IP=$(awk '{print $1}' <<< "$LINHA")
+        MAC=$(grep -oE '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})' <<< "$LINHA")
+
+        if [[ -z "$IP" || -z "$MAC" ]]; then continue; fi
+
+        TEMP_VIZ=$(mktemp)
+        awk -F'|' -v mac="$MAC" -v ip="$IP" '
+            BEGIN { OFS="|"; achou=0 }
+            {
+                if (tolower($1) == tolower(mac)) { $3=ip; achou=1 }
+                print
+            }
+            END {
+                if (!achou) print mac "||" ip
+            }
+        ' "$ARQ_VIZINHOS" > "$TEMP_VIZ"
+        mv "$TEMP_VIZ" "$ARQ_VIZINHOS"
+    done < <(ip -4 neigh show 2>/dev/null | grep -E 'lladr')
+}
+
+listar_vizinhos() {
+    local OPCOES MACS NOMES IPS ESCOLHA
+    local MAC NOME IP
+    local MAC_SEL NOME_SEL IP_SEL NOVO_NOME CONFIRMACAO TEMP_VIZ
+
+    while true; do
+        clear
+        echo "========== VIZINHOS DA REDE =========="
+        echo
+        echo "Escaneando..."
+        escanear_vizinhos
+
+        OPCOES=(); MACS=(); IPS=(); NOMES=()
+
+        while IFS="|" read -r MAC NOME IP; do
+            if [[ -z "$MAC" ]]; then continue; fi
+            if [[ -n "$NOME" ]]; then
+                OPCOES+=("$NOME ($IP)")
+            else
+                OPCOES+=("(sem nome) ($IP) - $MAC")
+            fi
+            MACS+=("$MAC")
+            IPS+=("$IP")
+            NOMES+=("$NOME")
+        done < "$ARQ_VIZINHOS"
+
+        if [[ ${#OPCOES[@]} -eq 0 ]]; then
+            clear
+            echo "Nenhum vizinho encontrado na rede"
+            echo
+            read -rp "Press ENTER"
+            return
+        fi
+
+        HABILITAR_DEL=1
+        selecionar_menu "${OPCOES[@]}"
+        ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
+        MAC_SEL="${MACS[$ESCOLHA]}"
+        NOME_SEL="${NOMES[$ESCOLHA]}"
+        IP_SEL="${IPS[$ESCOLHA]}"
+
+    done
+}
+
 menu_ips() {
     while true; do
         clear
@@ -1876,7 +1997,8 @@ menu_ips() {
             "Adicionar IP"
             "Listar IPs"
             "IPs conectados ao Samba"
-            "Buscar por octeto final" 
+            "Buscar por octeto final"
+            "Vizinhos da rede" 
         )
 
         selecionar_menu "${OPCOES[@]}"
@@ -1889,9 +2011,132 @@ menu_ips() {
         case $OPCAO in
             0) adicionar_ip ;;
             1) listar_ips ;;
-            2) listar_conexoes_samba ;; # ALTERADO
-            3) buscar_ip_octeto ;; # ALTERADO
+            2) listar_conexoes_samba ;;
+            3) buscar_ip_octeto ;;
+            4) listar_vizinhos ;;
         esac
+    done
+}
+
+# ==========================================
+# INSTRUÇÕES
+# ==========================================
+
+adicionar_passo() {
+    clear
+    echo
+    echo "========== NOVO PASSO A PASSO =========="
+    echo
+
+    local TITULO DESCRICAO_BREVE NOME DATA_PASSO ARQUIVO_PASSO TEMP_PASSO CONTEUDO
+
+    read -e -rp "Título: " TITULO
+    if [[ -z "$TITULO" ]]; then
+        echo
+        echo "O título não pode estar vazio"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    read -e -rp "Breve descrição: " DESCRICAO_BREVE
+
+    TEMP_PASSO=$(mktemp)
+    clear
+    read -rp "Press ENTER para abrir o nano e escrever o passo a passo"
+
+    nano "$TEMP_PASSO"
+    CONTEUDO=$(cat "$TEMP_PASSO")
+    rm -f "$TEMP_PASSO"
+
+    if [[ -z "$CONTEUDO" ]]; then
+        echo
+        echo "O conteúdo não pode estar vazio"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    NOME=$(echo "$TITULO" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+    DATA_PASSO=$(date '+%d-%m-%Y')
+    ARQUIVO_PASSO="$DIR_INSTRUCOES/${DATA_PASSO}-${NOME}.txt"
+
+    {
+        echo "========================================="
+        echo "            PASSO A PASSO"
+        echo "========================================="
+        echo
+        echo "TÍTULO: $TITULO"
+        echo "DESCRIÇÃO: $DESCRICAO_BREVE"
+        echo "DATA: $DATA_PASSO"
+        echo
+        echo "========================================="
+        echo
+        printf "%s" "$CONTEUDO"
+        echo
+    } > "$ARQUIVO_PASSO"
+
+    echo
+    echo "Passo a passo salvo com sucesso!"
+    read -rp "Press ENTER "
+}
+
+listar_passos() {
+    local OPCOES ARQUIVOS_ENCONTRADOS ARQUIVO_ATUAL TITULO DESCRICAO
+    local ESCOLHA CONFIRMACAO TITULO_SELECIONADO
+
+    while true; do
+        clear
+        echo "========== PASSO A PASSO =========="
+        echo
+
+        OPCOES=(); ARQUIVOS_ENCONTRADOS=()
+
+        while IFS= read -r ARQUIVO_ATUAL; do
+            if [[ -z "$ARQUIVO_ATUAL" ]]; then continue; fi
+            TITULO=$(grep "^TÍTULO:" "$ARQUIVO_ATUAL" | sed 's/^TÍTULO: //')
+            DESCRICAO=$(grep "^DESCRIÇÃO:" "$ARQUIVO_ATUAL" | sed 's/^DESCRIÇÃO: //')
+            OPCOES+=("$TITULO")
+            ARQUIVOS_ENCONTRADOS+=("$ARQUIVO_ATUAL")
+        done < <(find "$DIR_INSTRUCOES" -maxdepth 1 -type f -name "*.txt" | sort)
+
+        if [[ ${#OPCOES[@]} -eq 0 ]]; then
+            echo "Nenhum passo a passo cadastrado ainda"
+            echo
+        fi
+
+        HABILITAR_DEL=1
+        HABILITAR_ADD=1
+        selecionar_menu "${OPCOES[@]}"
+        ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
+        if [[ $ESCOLHA -eq 254 ]]; then
+            adicionar_passo
+            continue
+        fi
+
+        if [[ ${#OPCOES[@]} -eq 0 ]]; then
+            continue
+        fi
+
+        TITULO_SELECIONADO="${OPCOES[$ESCOLHA]}"
+
+        if [[ "$ACAO_MENU" == "DEL" ]]; then
+            echo
+            read -rp "Tem certeza que deseja EXCLUIR '${TITULO_SELECIONADO}'? [s/N]: " CONFIRMACAO
+            if [[ "$CONFIRMACAO" =~ ^[sS]$ ]]; then
+                rm -f "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
+            fi
+            continue
+        fi
+
+        clear
+        cat "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
+        echo
+        echo "========================================="
+        read -rp "Press ENTER para voltar à lista..."
     done
 }
 
@@ -2574,9 +2819,10 @@ while true; do
         "Diagnósticos"
         "Cheat Sheet"
         "IPs"
+        "Instruções"
         "Logs"
         "Feedback"
-        "Monitoramento"
+        "Dashboard"
     )
 
     selecionar_menu "${OPCOES[@]}"
@@ -2595,9 +2841,9 @@ while true; do
         5) menu_diagnosticos ;;
         6) menu_cheatsheet ;;
         7) menu_ips ;;
-        8) menu_logs ;;
-        9) menu_feedback ;;
-        10) dashboard ;;
+        8) listar_passos ;;
+        9) menu_logs ;;
+        10) menu_feedback ;;
+        11) dashboard ;;
     esac
-
 done
