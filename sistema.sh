@@ -11,11 +11,15 @@ DIR_EXPLICACOES="$RAIZ/explicacoes"
 DIR_DIAGNOSTICOS="$RAIZ/diagnosticos"
 DIR_AFAZERES="$RAIZ/afazeres"
 DIR_FEEDBACK="$RAIZ/feedback"
+DIR_CHEATSHEET="$RAIZ/cheat-sheet"
+DIR_IPS="$RAIZ/ips"
 
 ARQ_ARTIGOS="$DIR_ARTIGOS/artigos.txt"
 ARQ_DIAGNOSTICOS="$DIR_DIAGNOSTICOS/diagnosticos.txt"
 ARQ_AFAZERES="$DIR_AFAZERES/afazeres.txt"
 ARQ_USUARIOS="$DIR_FEEDBACK/usuarios.txt"
+ARQ_CHEATSHEET="$DIR_CHEATSHEET/comandos.txt"
+ARQ_IPS="$DIR_IPS/ips.txt"
 
 SEPARADOR_DIAGNOSTICO="###FIM_DIAGNOSTICO###"
 
@@ -39,12 +43,15 @@ verificar_estrutura() {
     mkdir -p "$DIR_DIAGNOSTICOS"
     mkdir -p "$DIR_AFAZERES"
     mkdir -p "$DIR_FEEDBACK"
+    mkdir -p "$DIR_CHEATSHEET"
+    mkdir -p "$DIR_IPS"
     # Arquivos
     touch "$ARQ_ARTIGOS"
     touch "$ARQ_AFAZERES"
     touch "$ARQ_DIAGNOSTICOS"
     touch "$ARQ_USUARIOS"
-
+    touch "$ARQ_CHEATSHEET"
+    touch "$ARQ_IPS"
     # add $USUARIO=user em usuarios.txt para o feedback ficar com o nome da pessoa, para isso teremos que mudar 'user' para o nome que queremos que apareça
     if ! grep -q "^${USUARIO}=" "$ARQ_USUARIOS" 2>/dev/null; then
         echo "${USUARIO}=user" >> "$ARQ_USUARIOS"
@@ -896,6 +903,7 @@ repetir() {
 
 centralizar() {
     # centralizar "texto" largura
+    local LC_ALL=C.utf8
     local texto="$1" largura="$2" len esq dir
     len=${#texto}
     if (( len >= largura )); then
@@ -910,6 +918,7 @@ centralizar() {
 
 preencher_direita() {
     # preencher_direita "texto" largura  -> como printf "%-Ns", mas seguro p/ UTF-8
+    local LC_ALL=C.utf8
     local texto="$1" largura="$2" falta
     falta=$(( largura - ${#texto} ))
     (( falta < 0 )) && falta=0
@@ -918,6 +927,7 @@ preencher_direita() {
 
 truncar_esq() {
     # truncar_esq "texto" largura  -> alinhado à esquerda, com "…" se estourar
+    local LC_ALL=C.utf8
     local texto="$1" largura="$2"
     if (( ${#texto} > largura )); then
         printf '%s' "${texto:0:$((largura-1))}…"
@@ -998,9 +1008,9 @@ desenhar_tabela() {
     printf "│%s%*s%s│\n" "$titulo" "$espacos" "" "$contagem"
 
     echo "$MEIO"
-    printf "│  ST  │ %-*s│%s│ %s│\n" "$LARG_TAREFA" "TAREFA" \
-        "$(centralizar "PRIORIDADE" $((LARG_PRIORIDADE+1)))" \
-        "$(centralizar "PRAZO" $LARG_PRAZO)"
+    printf "│  ST  │ %-*s │ %s │ %s │\n" "$LARG_TAREFA" "TAREFA" \
+        "$(centralizar "PRIORIDADE" "$LARG_PRIORIDADE")" \
+        "$(centralizar "PRAZO" "$LARG_PRAZO")"
     echo "$MEIO"
 
     local i ID STATUS PRIOR DESC PRAZO PONTEIRO col_st texto_tarefa texto_prior texto_prazo cor_prior
@@ -1029,9 +1039,9 @@ desenhar_tabela() {
         esac
 
         if (( i == SEL )); then
-            echo -e "│${COR_SEL}${col_st}${RESET}   │ ${texto_tarefa}│${cor_prior}${texto_prior}${RESET} │ ${texto_prazo}│"
+            echo -e "│${COR_SEL}${col_st}${RESET}│ ${texto_tarefa} │${cor_prior} ${texto_prior} ${RESET}│ ${texto_prazo} │"
         else
-            echo -e "│${COR_STATUS}${col_st}${RESET}│ ${texto_tarefa}│${cor_prior}${texto_prior}${RESET} │ ${texto_prazo}│"
+            echo -e "│${COR_STATUS}${col_st}${RESET}│ ${texto_tarefa} │${cor_prior} ${texto_prior} ${RESET}│ ${texto_prazo} │"
         fi
     done
 
@@ -1186,7 +1196,6 @@ menu_tarefas() {
         esac
     done
 }
-
 
 # ==========================================
 # DIAGNÓSTICOS
@@ -1410,6 +1419,478 @@ menu_diagnosticos(){
             0) add_diagnostico ;;
             1) abrir_diagnostico ;;
             2) ls_diagnostico ;;
+        esac
+    done
+}
+
+# ==========================================
+# CHEAT SHEET
+# ==========================================
+
+adicionar_comando() {
+    clear
+    echo
+    echo "========== ADICIONAR COMANDO =========="
+    echo
+
+    local OPCOES_SECAO=("Auditoria/Segurança" "Redes" "Diagnósticos")
+    selecionar_menu "${OPCOES_SECAO[@]}"
+    local ESCOLHA_SECAO=$?
+
+    if [[ $ESCOLHA_SECAO -eq 255 ]]; then
+        return
+    fi
+
+    local SECAO
+    case $ESCOLHA_SECAO in
+        0) SECAO="AUDITORIA" ;;
+        1) SECAO="REDES" ;;
+        2) SECAO="DIAGNOSTICOS" ;;
+    esac
+
+    local COMANDO DESCRICAO ID
+
+    read -e -rp "Comando: " COMANDO
+    read -e -rp "Descrição: " DESCRICAO
+
+    if [[ -z "$COMANDO" || -z "$DESCRICAO" ]]; then
+        echo
+        echo "Comando e descrição não podem estar vazios."
+        read -rp "Press ENTER "
+        return
+    fi
+
+    if [[ ! -s "$ARQ_CHEATSHEET" ]]; then
+        ID=1
+    else
+        ID=$(awk -F'|' 'NF >= 1 {print $1}' "$ARQ_CHEATSHEET" | sort -n | tail -n 1)
+        ID=$((ID + 1))
+    fi
+
+    echo "$ID|$SECAO|$COMANDO|$DESCRICAO" >> "$ARQ_CHEATSHEET"
+
+    echo
+    echo "Comando adicionado com sucesso!"
+    read -rp "Press ENTER "
+}
+
+listar_comandos_secao() {
+    local SECAO="$1" ROTULO="$2"
+    local OPCOES IDS COMANDOS DESCRICOES ESCOLHA
+    local ID SECAO_LINHA COMANDO DESCRICAO
+    local ID_SELECIONADO COMANDO_SELECIONADO DESCRICAO_SELECIONADA
+    local CONFIRMACAO EXECUTAR TEMP_CS
+
+    while true; do
+        clear
+        echo "========== $ROTULO =========="
+        echo
+
+        OPCOES=()
+        IDS=()
+        COMANDOS=()
+        DESCRICOES=()
+
+        while IFS="|" read -r ID SECAO_LINHA COMANDO DESCRICAO; do
+            if [[ -z "$ID" || "$SECAO_LINHA" != "$SECAO" ]]; then continue; fi
+            OPCOES+=("$COMANDO")
+            IDS+=("$ID")
+            COMANDOS+=("$COMANDO")
+            DESCRICOES+=("$DESCRICAO")
+        done < "$ARQ_CHEATSHEET"
+
+        if [[ ${#OPCOES[@]} -eq 0 ]]; then
+            echo "Nenhum comando cadastrado nesta seção"
+            echo
+            read -rp "Press ENTER "
+            return
+        fi
+
+        HABILITAR_DEL=1
+        selecionar_menu "${OPCOES[@]}"
+        ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
+        ID_SELECIONADO="${IDS[$ESCOLHA]}"
+        COMANDO_SELECIONADO="${COMANDOS[$ESCOLHA]}"
+        DESCRICAO_SELECIONADA="${DESCRICOES[$ESCOLHA]}"
+
+        if [[ "$ACAO_MENU" == "DEL" ]]; then
+            echo
+            read -rp "Tem certeza que deseja EXCLUIR o comando '${COMANDO_SELECIONADO}'? [s/N]: " CONFIRMACAO
+            if [[ "$CONFIRMACAO" =~ ^[sS]$ ]]; then
+                TEMP_CS=$(mktemp)
+                awk -F '|' -v id="$ID_SELECIONADO" '$1 != id {print $0}' "$ARQ_CHEATSHEET" > "$TEMP_CS"
+                mv "$TEMP_CS" "$ARQ_CHEATSHEET"
+            fi
+            continue
+        fi
+
+        clear
+        echo "========== DETALHES DO COMANDO =========="
+        echo "Comando:    $COMANDO_SELECIONADO"
+        echo "Descrição:  $DESCRICAO_SELECIONADA"
+        echo "==========================================="
+        echo
+        read -rp "Deseja executar este comando agora? [s/N]: " EXECUTAR
+        if [[ "$EXECUTAR" =~ ^[sS]$ ]]; then
+            clear
+            bash -c "$COMANDO_SELECIONADO" # roda em subshell isolado, não usa eval no shell atual
+            echo
+            read -rp "Press ENTER "
+        fi
+    done
+}
+
+menu_cheatsheet() {
+    while true; do
+        clear
+        local OPCOES=(
+            "Adicionar comando"
+            "Auditoria/Segurança"
+            "Redes"
+            "Diagnósticos"
+        )
+
+        selecionar_menu "${OPCOES[@]}"
+        local OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
+        case $OPCAO in
+            0) adicionar_comando ;;
+            1) listar_comandos_secao "AUDITORIA" "AUDITORIA/SEGURANÇA" ;;
+            2) listar_comandos_secao "REDES" "REDES" ;;
+            3) listar_comandos_secao "DIAGNOSTICOS" "DIAGNÓSTICOS" ;;
+        esac
+    done
+}
+
+# ==========================================
+# IPs
+# ==========================================
+
+validar_ip() {
+    local ip="$1"
+    local -a OCTETOS
+    local OCTETO
+
+    if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        return 1
+    fi
+
+    IFS='.' read -ra OCTETOS <<< "$ip"
+    for OCTETO in "${OCTETOS[@]}"; do
+        if (( OCTETO > 255 )); then
+            return 1
+        fi
+    done
+
+    return 0
+}
+
+adicionar_ip() {
+    clear
+    echo
+    echo "========== ADICIONAR IP =========="
+    echo
+
+    local NOME IP DESCRICAO ID
+
+    read -e -rp "Nome da máquina: " NOME
+    if [[ -z "$NOME" ]]; then
+        echo
+        echo "O nome não pode estar vazio"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    read -e -rp "IP: " IP
+    if ! validar_ip "$IP"; then
+        echo
+        echo "IP inválido. Use o formato XXX.XXX.XXX.XXX (cada número entre 0 e 255)"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    read -e -rp "Descrição (opcional): " DESCRICAO
+
+    if [[ ! -s "$ARQ_IPS" ]]; then
+        ID=1
+    else
+        ID=$(awk -F'|' 'NF >= 1 {print $1}' "$ARQ_IPS" | sort -n | tail -n 1)
+        ID=$((ID + 1))
+    fi
+
+    echo "$ID|$NOME|$IP|$DESCRICAO" >> "$ARQ_IPS"
+
+    echo
+    echo "IP adicionado com sucesso!"
+    read -rp "Press ENTER "
+}
+
+pingar_ip() {
+    local IP="$1" NOME="$2"
+    clear
+    echo "========== PING: $NOME ($IP) =========="
+    echo
+    echo "Pressione Ctrl+C para interromper"
+    echo
+    ping -c 4 "$IP"
+    echo
+    read -rp "Press ENTER "
+}
+
+editar_ip() {
+    local ID_SELECIONADO="$1" NOME_ATUAL="$2" IP_ATUAL="$3" DESCRICAO_ATUAL="$4"
+    local NOVO_NOME NOVO_IP NOVA_DESCRICAO CONFIRMACAO TEMP_IP
+
+    echo
+    read -e -i "$NOME_ATUAL" -rp "Nome da máquina: " NOVO_NOME
+    read -e -i "$IP_ATUAL" -rp "IP: " NOVO_IP
+
+    if ! validar_ip "$NOVO_IP"; then
+        echo
+        echo "IP inválido. Edição cancelada"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    read -e -i "$DESCRICAO_ATUAL" -rp "Descrição: " NOVA_DESCRICAO
+
+    echo
+    read -rp "Confirma salvar essa alteração? [s/N]: " CONFIRMACAO
+    if [[ ! "$CONFIRMACAO" =~ ^[sS]$ ]]; then
+        echo
+        echo "Alteração cancelada"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    TEMP_IP=$(mktemp)
+    awk -F'|' -v id="$ID_SELECIONADO" -v nome="$NOVO_NOME" -v ip="$NOVO_IP" -v desc="$NOVA_DESCRICAO" \
+        'BEGIN{OFS="|"} { if ($1 == id) { $2=nome; $3=ip; $4=desc }; print }' "$ARQ_IPS" > "$TEMP_IP"
+    mv "$TEMP_IP" "$ARQ_IPS"
+
+    echo
+    echo "IP atualizado com sucesso!"
+    read -rp "Press ENTER "
+}
+
+listar_ips() {
+    local OPCOES IDS NOMES IPS DESCRICOES ESCOLHA
+    local ID NOME IP DESCRICAO
+    local ID_SELECIONADO NOME_SELECIONADO IP_SELECIONADO DESCRICAO_SELECIONADA
+    local CONFIRMACAO OPCOES_ACAO ESCOLHA_ACAO TEMP_IP
+
+    while true; do
+        clear
+        echo "========== LISTA DE IPs =========="
+        echo
+
+        if [[ ! -s "$ARQ_IPS" ]]; then
+            echo "Nenhum IP cadastrado"
+            echo
+            read -rp "Press ENTER "
+            return
+        fi
+
+        OPCOES=()
+        IDS=()
+        NOMES=()
+        IPS=()
+        DESCRICOES=()
+
+        while IFS="|" read -r ID NOME IP DESCRICAO; do
+            if [[ -z "$ID" ]]; then continue; fi
+            OPCOES+=("$NOME ($IP)")
+            IDS+=("$ID")
+            NOMES+=("$NOME")
+            IPS+=("$IP")
+            DESCRICOES+=("$DESCRICAO")
+        done < <(sort -n "$ARQ_IPS")
+
+        HABILITAR_DEL=1
+        selecionar_menu "${OPCOES[@]}"
+        ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
+        ID_SELECIONADO="${IDS[$ESCOLHA]}"
+        NOME_SELECIONADO="${NOMES[$ESCOLHA]}"
+        IP_SELECIONADO="${IPS[$ESCOLHA]}"
+        DESCRICAO_SELECIONADA="${DESCRICOES[$ESCOLHA]}"
+
+        if [[ "$ACAO_MENU" == "DEL" ]]; then
+            echo
+            read -rp "Tem certeza que deseja EXCLUIR '${NOME_SELECIONADO}'? [s/N]: " CONFIRMACAO
+            if [[ "$CONFIRMACAO" =~ ^[sS]$ ]]; then
+                TEMP_IP=$(mktemp)
+                awk -F '|' -v id="$ID_SELECIONADO" '$1 != id {print $0}' "$ARQ_IPS" > "$TEMP_IP"
+                mv "$TEMP_IP" "$ARQ_IPS"
+            fi
+            continue
+        fi
+
+        clear
+        echo "========== DETALHES =========="
+        echo "Nome:       $NOME_SELECIONADO"
+        echo "IP:         $IP_SELECIONADO"
+        echo "Descrição:  $DESCRICAO_SELECIONADA"
+        echo "================================"
+        echo
+
+        OPCOES_ACAO=("Pingar" "Editar" "Voltar")
+        selecionar_menu "${OPCOES_ACAO[@]}"
+        ESCOLHA_ACAO=$?
+
+        case $ESCOLHA_ACAO in
+            0) pingar_ip "$IP_SELECIONADO" "$NOME_SELECIONADO" ;;
+            1) editar_ip "$ID_SELECIONADO" "$NOME_SELECIONADO" "$IP_SELECIONADO" "$DESCRICAO_SELECIONADA" ;;
+            *) continue ;;
+        esac
+    done
+}
+
+listar_conexoes_samba() {
+    clear
+    echo "========== IPs CONECTADOS AO SAMBA =========="
+    echo
+
+    if ! command -v smbstatus >/dev/null 2>&1; then
+        echo "[ ERRO ] Comando 'smbstatus' não encontrado"
+        echo
+        read -rp "Press ENTER "
+        return
+    fi
+
+    local IPS_CONECTADOS IP NOME_CATALOGO
+
+    IPS_CONECTADOS=$(sudo smbstatus 2>/dev/null | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | sort -u)
+
+    if [[ -z "$IPS_CONECTADOS" ]]; then
+        echo "Nenhuma conexão ativa no Samba no momento"
+        echo
+        read -rp "Press ENTER "
+        return
+    fi
+
+    while IFS= read -r IP; do
+        NOME_CATALOGO=""
+        if [[ -s "$ARQ_IPS" ]]; then
+            NOME_CATALOGO=$(awk -F'|' -v ip="$IP" '$3 == ip {print $2; exit}' "$ARQ_IPS")
+        fi
+        if [[ -n "$NOME_CATALOGO" ]]; then
+            echo "  $IP  —  $NOME_CATALOGO"
+        else
+            echo "  $IP  —  (não cadastrado no catálogo de IPs)"
+        fi
+    done <<< "$IPS_CONECTADOS"
+
+    echo
+    read -rp "Press ENTER "
+}
+
+buscar_ip_octeto() {
+    clear
+    echo "========== BUSCAR POR OCTETO FINAL =========="
+    echo
+
+    local OCTETO
+
+    read -e -rp "Digite o octeto final (0-255): " OCTETO
+
+    if [[ ! "$OCTETO" =~ ^[0-9]{1,3}$ ]] || (( OCTETO > 255 )); then
+        echo
+        echo "Octeto inválido"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    if [[ ! -s "$ARQ_IPS" ]]; then
+        echo
+        echo "Nenhum IP cadastrado"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    local OPCOES IDS NOMES IPS DESCRICOES ID NOME IP DESCRICAO ESCOLHA ESCOLHA_ACAO OPCOES_ACAO
+
+    OPCOES=(); IDS=(); NOMES=(); IPS=(); DESCRICOES=()
+
+    while IFS="|" read -r ID NOME IP DESCRICAO; do
+        if [[ -z "$ID" ]]; then continue; fi
+        if [[ "${IP##*.}" == "$OCTETO" ]]; then
+            OPCOES+=("$NOME ($IP)")
+            IDS+=("$ID")
+            NOMES+=("$NOME")
+            IPS+=("$IP")
+            DESCRICOES+=("$DESCRICAO")
+        fi
+    done < <(sort -n "$ARQ_IPS")
+
+    if [[ ${#OPCOES[@]} -eq 0 ]]; then
+        echo
+        echo "Nenhum IP cadastrado terminando em .$OCTETO"
+        read -rp "Press ENTER "
+        return
+    fi
+
+    while true; do
+        selecionar_menu "${OPCOES[@]}"
+        ESCOLHA=$?
+
+        if [[ $ESCOLHA -eq 255 ]]; then
+            return
+        fi
+
+        clear
+        echo "========== DETALHES =========="
+        echo "Nome:       ${NOMES[$ESCOLHA]}"
+        echo "IP:         ${IPS[$ESCOLHA]}"
+        echo "Descrição:  ${DESCRICOES[$ESCOLHA]}"
+        echo "================================"
+        echo
+
+        OPCOES_ACAO=("Pingar" "Voltar")
+        selecionar_menu "${OPCOES_ACAO[@]}"
+        ESCOLHA_ACAO=$?
+
+        if [[ $ESCOLHA_ACAO -eq 0 ]]; then
+            pingar_ip "${IPS[$ESCOLHA]}" "${NOMES[$ESCOLHA]}"
+        fi
+    done
+}
+
+menu_ips() {
+    while true; do
+        clear
+        local OPCOES=(
+            "Adicionar IP"
+            "Listar IPs"
+            "IPs conectados ao Samba"
+            "Buscar por octeto final" 
+        )
+
+        selecionar_menu "${OPCOES[@]}"
+        local OPCAO=$?
+
+        if [[ $OPCAO -eq 255 ]]; then
+            return
+        fi
+
+        case $OPCAO in
+            0) adicionar_ip ;;
+            1) listar_ips ;;
+            2) listar_conexoes_samba ;; # ALTERADO
+            3) buscar_ip_octeto ;; # ALTERADO
         esac
     done
 }
@@ -1918,6 +2399,164 @@ menu_feedback() {
 }
 
 # ==========================================
+# DASHBOARD
+# ==========================================
+
+obter_uso_cpu() {
+    local _ u1 n1 s1 i1 w1 irq1 sirq1
+    local u2 n2 s2 i2 w2 irq2 sirq2
+    local total1 total2 idle1 idle2 diff_total diff_idle uso
+
+    read -r _ u1 n1 s1 i1 w1 irq1 sirq1 _ < /proc/stat
+    total1=$((u1+n1+s1+i1+w1+irq1+sirq1))
+    idle1=$i1
+
+    sleep 0.5
+
+    read -r _ u2 n2 s2 i2 w2 irq2 sirq2 _ < /proc/stat
+    total2=$((u2+n2+s2+i2+w2+irq2+sirq2))
+    idle2=$i2
+
+    diff_total=$((total2-total1))
+    diff_idle=$((idle2-idle1))
+
+    if (( diff_total > 0 )); then
+        uso=$(awk -v t="$diff_total" -v i="$diff_idle" 'BEGIN{printf "%.2f", (t-i)*100/t}')
+    else
+        uso="0.00"
+    fi
+
+    echo "$uso"
+}
+
+obter_temp_cpu() {
+    local zona arq_tipo tipo temp_bruta=""
+
+    for zona in /sys/class/thermal/thermal_zone*; do
+        [[ -d "$zona" ]] || continue
+        arq_tipo="$zona/type"
+        if [[ -f "$arq_tipo" ]]; then
+            tipo=$(cat "$arq_tipo" 2>/dev/null)
+            if [[ "$tipo" =~ ^(x86_pkg_temp|cpu-thermal|coretemp|acpitz)$ ]] && [[ -f "$zona/temp" ]]; then
+                temp_bruta=$(cat "$zona/temp" 2>/dev/null)
+                break
+            fi
+        fi
+    done
+
+    if [[ -z "$temp_bruta" && -f /sys/class/thermal/thermal_zone0/temp ]]; then
+        temp_bruta=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
+    fi
+
+    if [[ -n "$temp_bruta" && "$temp_bruta" =~ ^[0-9]+$ ]]; then
+        awk -v t="$temp_bruta" 'BEGIN{printf "%.1f", t/1000}'
+    else
+        echo "N/D"
+    fi
+}
+
+obter_load_average() {
+    awk '{print $1", "$2", "$3}' /proc/loadavg 2>/dev/null
+}
+
+obter_memoria() {
+    local total_kb free_kb buffers_kb cached_kb sreclaim_kb swap_total_kb swap_free_kb
+
+    total_kb=$(awk '/^MemTotal:/{print $2}' /proc/meminfo)
+    free_kb=$(awk '/^MemFree:/{print $2}' /proc/meminfo)
+    buffers_kb=$(awk '/^Buffers:/{print $2}' /proc/meminfo)
+    cached_kb=$(awk '/^Cached:/{print $2; exit}' /proc/meminfo)
+    sreclaim_kb=$(awk '/^SReclaimable:/{print $2}' /proc/meminfo)
+    swap_total_kb=$(awk '/^SwapTotal:/{print $2}' /proc/meminfo)
+    swap_free_kb=$(awk '/^SwapFree:/{print $2}' /proc/meminfo)
+
+    awk -v total="${total_kb:-0}" -v free="${free_kb:-0}" -v buffers="${buffers_kb:-0}" \
+        -v cached="${cached_kb:-0}" -v sreclaim="${sreclaim_kb:-0}" \
+        -v swap_total="${swap_total_kb:-0}" -v swap_free="${swap_free_kb:-0}" '
+    BEGIN {
+        cache = buffers + cached + sreclaim
+        usada = total - free - buffers - cached - sreclaim
+        if (usada < 0) usada = 0
+        uso_pct = (total > 0) ? (usada*100/total) : 0
+        swap_usada = swap_total - swap_free
+        swap_pct = (swap_total > 0) ? (swap_usada*100/swap_total) : 0
+        printf "%.2f|%d|%d|%d|%d|%.2f", uso_pct, total/1024, usada/1024, free/1024, cache/1024, swap_pct
+    }'
+}
+
+obter_disco_root() {
+    local uso_pct inodes_pct
+    uso_pct=$(df -h / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')
+    inodes_pct=$(df -i / 2>/dev/null | awk 'NR==2 {gsub("%","",$5); print $5}')
+    echo "${uso_pct:-0}|${inodes_pct:-0}"
+}
+
+obter_rede() {
+    local iface rx_bytes tx_bytes rx_mb tx_mb
+    iface=$(ip route 2>/dev/null | awk '/^default/ {print $5; exit}')
+    if [[ -z "$iface" ]]; then
+        echo "N/D|0.00|0.00"
+        return
+    fi
+    rx_bytes=$(cat "/sys/class/net/$iface/statistics/rx_bytes" 2>/dev/null)
+    tx_bytes=$(cat "/sys/class/net/$iface/statistics/tx_bytes" 2>/dev/null)
+    rx_mb=$(awk -v b="${rx_bytes:-0}" 'BEGIN{printf "%.2f", b/1024/1024}')
+    tx_mb=$(awk -v b="${tx_bytes:-0}" 'BEGIN{printf "%.2f", b/1024/1024}')
+    echo "${iface}|${rx_mb}|${tx_mb}"
+}
+
+dashboard() {
+    clear
+    echo "Calculando métricas (leva cerca de meio segundo)..."
+
+    local uso_cpu temp_cpu load_avg
+    local mem_info uso_ram_pct ram_total ram_usada ram_livre ram_cache swap_pct
+    local disco_info uso_disco inodes_disco
+    local tempo_ligado
+    local rede_info iface rx_mb tx_mb
+
+    uso_cpu=$(obter_uso_cpu)
+    temp_cpu=$(obter_temp_cpu)
+    load_avg=$(obter_load_average)
+
+    mem_info=$(obter_memoria)
+    IFS='|' read -r uso_ram_pct ram_total ram_usada ram_livre ram_cache swap_pct <<< "$mem_info"
+
+    disco_info=$(obter_disco_root)
+    IFS='|' read -r uso_disco inodes_disco <<< "$disco_info"
+
+    tempo_ligado=$(uptime -p 2>/dev/null)
+
+    rede_info=$(obter_rede)
+    IFS='|' read -r iface rx_mb tx_mb <<< "$rede_info"
+
+    clear
+    echo "[ PROCESSADOR ]"
+    printf "%-22s: %s%%\n" "Uso de CPU" "$uso_cpu"
+    printf "%-22s: %s °C\n" "Temperatura CPU" "$temp_cpu"
+    printf "%-22s: %s\n" "Load Average" "$load_avg"
+    echo
+    echo "[ MEMÓRIA RAM ]"
+    printf "%-22s: %s%%\n" "Uso de RAM (%)" "$uso_ram_pct"
+    printf "%-22s: %s MB\n" "RAM Total" "$ram_total"
+    printf "%-22s: %s MB\n" "RAM Usada" "$ram_usada"
+    printf "%-22s: %s MB\n" "RAM Livre" "$ram_livre"
+    printf "%-22s: %s MB\n" "RAM em Cache/Buffer" "$ram_cache"
+    printf "%-22s: %s%%\n" "Uso de Swap (%)" "$swap_pct"
+    echo
+    echo "[ SISTEMA E DISCO ]"
+    printf "%-22s: %s%%\n" "Uso Disco Root (/)" "$uso_disco"
+    printf "%-22s: %s%%\n" "Inodes Root (/)" "$inodes_disco"
+    printf "%-22s: %s\n" "Tempo Ligado" "$tempo_ligado"
+    echo
+    echo "[ REDE ($iface) ]"
+    printf "%-22s: %s MB\n" "Rx (Recebido)" "$rx_mb"
+    printf "%-22s: %s MB\n" "Tx (Transmitido)" "$tx_mb"
+    echo
+    read -rp "Press ENTER "
+}
+
+# ==========================================
 # MENU PRINCIPAL
 # ==========================================
 
@@ -1933,8 +2572,11 @@ while true; do
         "Explicações"
         "Tarefas"
         "Diagnósticos"
+        "Cheat Sheet"
+        "IPs"
         "Logs"
         "Feedback"
+        "Monitoramento"
     )
 
     selecionar_menu "${OPCOES[@]}"
@@ -1951,8 +2593,11 @@ while true; do
         3) menu_estudos ;;
         4) ls_tarefas ;;
         5) menu_diagnosticos ;;
-        6) menu_logs ;;
-        7) menu_feedback ;;
+        6) menu_cheatsheet ;;
+        7) menu_ips ;;
+        8) menu_logs ;;
+        9) menu_feedback ;;
+        10) dashboard ;;
     esac
 
 done

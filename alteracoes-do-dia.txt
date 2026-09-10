@@ -38,8 +38,17 @@ RAYSSA:
         \ d deleta e pede confirmação 
         \ < > setas mudando o estado da tarefa
         \ dificuldade encontrada: alinhamento da tabela no terminal
-===============================================================
 
+===============================================================
+EMANUEL (09/09/2026):
+    - arrumado os bugs de voltar ao pressionar enter no ultimo item da lista
+    - adicionado menu de cheat sheet (validado)
+    - adicionado menu de IPs (add ip e listar ip foram validados, novas funções dentro do menu ainda não)
+    - tabela tarefas arrumada (testando)
+    - testar dnv tabela que deu muito errado do claudio (vou fazer isso amanha 10/09, desconfio que algo besta estava errado) [ larg_prazo sem fechar > aspas ]
+    - monitoramento em tempo real (testando)
+
+===============================================================
 validado = testado e funcionando
 testando = em processo de testes
 feito    = apenas feito, sem testes

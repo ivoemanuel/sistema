@@ -1,0 +1,2 @@
+1|dnashare|192.168.88.20|mini PC
+2|Google|8.8.8.8|Google
