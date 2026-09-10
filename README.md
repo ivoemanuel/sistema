@@ -2,7 +2,7 @@
 
 **DNA Feed** é uma aplicação web para que membros de equipe registrem e acompanhem seus relatórios de atividades diárias (feedbacks), com um espaço para que a liderança adicione notas de acompanhamento a cada registro.
 
-Construída para rodar em **localhost**, com foco em simplicidade, modularização (padrão MVC) e boas práticas básicas de segurança.
+Construída inicialmente para rodar em **localhost**, com foco em simplicidade e boas práticas básicas de segurança.
 
 ---
 
@@ -26,8 +26,9 @@ Construída para rodar em **localhost**, com foco em simplicidade, modularizaç�
 | Camada          | Tecnologia                                   |
 |-----------------|-----------------------------------------------|
 | Back-end        | Node.js + Express                             |
+| Back-end        | Shell                                         |
 | Views           | Handlebars (`express-handlebars`)             |
-| Front-end       | CSS puro + JavaScript Vanilla (sem frameworks)|
+| Front-end       | CSS + JavaScript Vanilla (sem frameworks)|
 | Banco de dados  | SQLite (via `sqlite3`)                        |
 | Sessão          | `express-session` + `connect-sqlite3`         |
 | Senhas          | `bcryptjs` (hash + salt)                      |
@@ -38,7 +39,7 @@ Nenhum framework de front-end (React/Vue/etc.) é utilizado — todas as intera�
 
 ## Arquitetura e Estrutura de Pastas
 
-O projeto segue o padrão **MVC** (Model-View-Controller), com uma separação estrita de responsabilidades:
+O projeto inicial segue:
 
 ```
 dna-feed/
@@ -91,9 +92,31 @@ dna-feed/
         ├── calendar.js          # Renderização do calendário
         └── notes.js             # CRUD de notas pessoais via fetch/API
 ```
+---
 
-**Fluxo de uma requisição:** `routes/*` recebe a requisição → aplica `middlewares` (autenticação/autorização) → delega para `controllers/*` → controller consulta `db/database.js` → resultado é passado para uma `view/*.hbs`, renderizada dentro do `layouts/main.hbs`.
+## Arquitetura e Estrutura de Pastas com Shell
 
+Para integrar a inteligência desenvolvida em Shell (scripts de infraestrutura, automações e rotinas avançadas) sem perder a robustez do servidor web, a arquitetura foi expandida. 
+
+O Node.js continua atuando como o maestro (Back-end) da interface, utilizando o módulo nativo `child_process` para invocar os scripts em Shell em um ambiente isolado.
+
+```text
+dna-feed/
+├── ... (arquitetura MVC original do Node mantida)
+│
+├── scripts/                     # Inteligência em Shell (Trabalhador)
+│   ├── sistema.sh               # Script principal com rotinas gerais de sistema
+│   ├── turnos.sh                # Script dedicado ao processamento/controle de turnos
+│   └── sistema.sh.bkp           # Backup de segurança da versão anterior (não acionado via API)
+│
+├── utils/                       # Ferramentas auxiliares do Node
+│   └── shellRunner.js           # Wrapper seguro utilizando child_process (exec/spawn)
+│
+├── routes/                      
+│   └── shellRoutes.js           # Endpoints dedicados para acionar as automações (ex: invocar turnos.sh)
+│
+└── controllers/                 
+    └── shellController.js       # Recebe a requisição web, sanitiza dados e aciona o shellRunner
 ---
 
 ## Modelo de Dados
@@ -168,7 +191,7 @@ Acesse **http://localhost:3000** no navegador. Você será redirecionado para a 
 
 ---
 
-## Funcionalidades
+## Funcionalidades iniciais:
 
 ### Login
 Autenticação simples baseada em sessão. Não há tela de cadastro público — todos os usuários são provisionados via `db/seed.js` (ou diretamente no banco).
