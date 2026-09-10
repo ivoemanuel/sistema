@@ -57,6 +57,114 @@ verificar_estrutura() {
         echo "${USUARIO}=user" >> "$ARQ_USUARIOS"
     fi
 } 
+# ==========================================
+# SENHAS
+# ==========================================
+
+COFRE_ARQUIVO="$RAIZ/.cofre.enc"
+PALAVRA_SECRETA="s#ad0w"
+
+verificar_palavra_secreta() {
+    local tecla="$1"
+    local n=${#PALAVRA_SECRETA}
+    [[ "$tecla" =~ [[:print:]] ]] || return 1
+
+    BUFFER_TECLAS+="$tecla"
+    (( ${#BUFFER_TECLAS} > n )) && BUFFER_TECLAS="${BUFFER_TECLAS: -n}"
+
+    if [[ "$BUFFER_TECLAS" == "$PALAVRA_SECRETA" ]]; then
+        BUFFER_TECLAS=""
+        abrir_cofre_senhas
+        return 0
+    fi
+    return 1
+}
+
+abrir_cofre_senhas() {
+    local senha_master
+    local tmp
+
+    clear
+    echo ""
+    echo
+
+    if [[ ! -f "$COFRE_ARQUIVO" ]]; then
+
+        read -rp "Nenhum cofre encontrado. Criar um novo? (s/n) " resp
+
+        if [[ "$resp" != "s" ]]; then
+            read -rp "Press ENTER" _
+            return
+        fi
+
+        echo
+        read -rsp "Crie sua senha mestra: " senha_master
+        echo
+
+        read -rsp "Confirme sua senha mestra: " senha_confirmacao
+        echo
+
+        if [[ "$senha_master" != "$senha_confirmacao" ]]; then
+            echo "As senhas não coincidem."
+            sleep 2
+            return
+        fi
+
+        criar_cofre_senhas "$senha_master"
+
+        read -rp "Press ENTER" _
+        return
+    fi
+
+    # COFRE JÁ EXISTE
+    read -rsp "" senha_master
+    echo
+
+    tmp=$(mktemp)
+
+    # DESCRIPTOGRAFA
+    if ! openssl enc -d -aes-256-cbc -pbkdf2 \
+        -in "$COFRE_ARQUIVO" \
+        -out "$tmp" \
+        -pass pass:"$senha_master" 2>/dev/null; then
+
+        echo "Senha incorreta ou arquivo corrompido."
+        rm -f "$tmp"
+        return
+    fi
+
+    # ABRE NO NANO
+    nano "$tmp"
+
+    # CRIPTOGRAFA NOVAMENTE APÓS SAIR DO NANO
+    if openssl enc -aes-256-cbc -pbkdf2 -salt \
+        -in "$tmp" \
+        -out "$COFRE_ARQUIVO" \
+        -pass pass:"$senha_master"; then
+
+        chmod 600 "$COFRE_ARQUIVO"
+    else
+        echo "Erro ao salvar o cofre."
+        sleep 2
+    fi
+
+    # APAGA O ARQUIVO TEMPORÁRIO
+    shred -u "$tmp" 2>/dev/null || rm -f "$tmp"
+
+    return
+}
+
+criar_cofre_senhas() {
+    local senha_master="$1" tmp
+    tmp=$(mktemp)
+    echo "Digite o conteúdo do cofre (Ctrl+D para terminar):"
+    cat > "$tmp"
+    mkdir -p "$(dirname "$COFRE_ARQUIVO")"
+    openssl enc -aes-256-cbc -pbkdf2 -salt -in "$tmp" -out "$COFRE_ARQUIVO" \
+        -pass pass:"$senha_master"
+    shred -u "$tmp" 2>/dev/null || rm -f "$tmp"
+    echo "Cofre criado em $COFRE_ARQUIVO"
+}
 
 # ==========================================
 # MENU DE NAVEGAÇÂO
@@ -67,7 +175,7 @@ selecionar_menu() {
     local OPCOES=("$@")
     local SELECIONADO=0 
     local TECLA RETORNO
-
+    local BUFFER_TECLAS=""
     ACAO_MENU="ENTER"
 
     while true; do
@@ -126,6 +234,8 @@ selecionar_menu() {
                     fi
                     ;;
             esac
+        else
+            verificar_palavra_secreta "$TECLA"
         fi
         if (( SELECIONADO < 0 )); then
             SELECIONADO=$((${#OPCOES[@]} - 1))
@@ -2585,6 +2695,7 @@ while true; do
     if [[ $OPCAO -eq 255 ]]; then
         clear; break
     fi
+
 
     case $OPCAO in
         0) menu_turnos ;;
