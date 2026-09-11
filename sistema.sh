@@ -1022,7 +1022,7 @@ COR_SEL="\e[7m"     # inverte fundo/texto na linha selecionada
 RESET="\e[0m"
 
 COR_EMANUEL="\e[38;2;42;57;176;01m"
-COR_RAYSSA="\e[38;2;255;20;147;01m"
+COR_RAYSSA="\e[38;2;255;0;255;01m"
 COR_DANIELE="\e[38;2;148;0;211;01m"
 
 # --------------------- Funções auxiliares ---------------------
@@ -1889,11 +1889,17 @@ listar_ips() {
         done < <(sort -n "$ARQ_IPS")
 
         HABILITAR_DEL=1
+        HABILITAR_ADD=1
         selecionar_menu "${OPCOES[@]}"
         ESCOLHA=$?
 
         if [[ $ESCOLHA -eq 255 ]]; then
             return
+        fi
+
+        if [[ $ESCOLHA -eq 254 ]]; then
+            adicionar_ip
+            continue
         fi
 
         ID_SELECIONADO="${IDS[$ESCOLHA]}"
@@ -2149,7 +2155,6 @@ menu_ips() {
     while true; do
         clear
         local OPCOES=(
-            "Adicionar IP"
             "Listar IPs"
             "IPs conectados ao Samba"
             "Buscar por octeto final"
@@ -2164,11 +2169,10 @@ menu_ips() {
         fi
 
         case $OPCAO in
-            0) adicionar_ip ;;
-            1) listar_ips ;;
-            2) listar_conexoes_samba ;;
-            3) buscar_ip_octeto ;;
-            4) listar_vizinhos ;;
+            0) listar_ips ;;
+            1) listar_conexoes_samba ;;
+            2) buscar_ip_octeto ;;
+            3) listar_vizinhos ;;
         esac
     done
 }
