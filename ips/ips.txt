@@ -1,3 +1,0 @@
-2|Google|8.8.8.8|Google
-3|Rayssa|192.168.88.252|Rayssa
-4|Quad9|9.9.9.9|IP para testes de internet

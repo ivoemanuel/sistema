@@ -2178,128 +2178,6 @@ menu_ips() {
 }
 
 # ==========================================
-# INSTRUÇÕES
-# ==========================================
-
-adicionar_passo() {
-    clear
-    echo
-    echo "========== NOVO PASSO A PASSO =========="
-    echo
-
-    local TITULO DESCRICAO_BREVE NOME DATA_PASSO ARQUIVO_PASSO TEMP_PASSO CONTEUDO
-
-    read -e -rp "Título: " TITULO
-    if [[ -z "$TITULO" ]]; then
-        echo
-        echo "O título não pode estar vazio"
-        read -rp "Press ENTER "
-        return
-    fi
-
-    read -e -rp "Breve descrição: " DESCRICAO_BREVE
-
-    TEMP_PASSO=$(mktemp)
-    clear
-    read -rp "Press ENTER para abrir o nano e escrever o passo a passo"
-
-    nano "$TEMP_PASSO"
-    CONTEUDO=$(cat "$TEMP_PASSO")
-    rm -f "$TEMP_PASSO"
-
-    if [[ -z "$CONTEUDO" ]]; then
-        echo
-        echo "O conteúdo não pode estar vazio"
-        read -rp "Press ENTER "
-        return
-    fi
-
-    NOME=$(echo "$TITULO" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
-    DATA_PASSO=$(date '+%d-%m-%Y')
-    ARQUIVO_PASSO="$DIR_INSTRUCOES/${DATA_PASSO}-${NOME}.txt"
-
-    {
-        echo "========================================="
-        echo "            PASSO A PASSO"
-        echo "========================================="
-        echo
-        echo "TÍTULO: $TITULO"
-        echo "DESCRIÇÃO: $DESCRICAO_BREVE"
-        echo "DATA: $DATA_PASSO"
-        echo
-        echo "========================================="
-        echo
-        printf "%s" "$CONTEUDO"
-        echo
-    } > "$ARQUIVO_PASSO"
-
-    echo
-    echo "Passo a passo salvo com sucesso!"
-    read -rp "Press ENTER "
-}
-
-listar_passos() {
-    local OPCOES ARQUIVOS_ENCONTRADOS ARQUIVO_ATUAL TITULO DESCRICAO
-    local ESCOLHA CONFIRMACAO TITULO_SELECIONADO
-
-    while true; do
-        clear
-        echo "========== PASSO A PASSO =========="
-        echo
-
-        OPCOES=(); ARQUIVOS_ENCONTRADOS=()
-
-        while IFS= read -r ARQUIVO_ATUAL; do
-            if [[ -z "$ARQUIVO_ATUAL" ]]; then continue; fi
-            TITULO=$(grep "^TÍTULO:" "$ARQUIVO_ATUAL" | sed 's/^TÍTULO: //')
-            DESCRICAO=$(grep "^DESCRIÇÃO:" "$ARQUIVO_ATUAL" | sed 's/^DESCRIÇÃO: //')
-            OPCOES+=("$TITULO")
-            ARQUIVOS_ENCONTRADOS+=("$ARQUIVO_ATUAL")
-        done < <(find "$DIR_INSTRUCOES" -maxdepth 1 -type f -name "*.txt" | sort)
-
-        if [[ ${#OPCOES[@]} -eq 0 ]]; then
-            echo "Nenhum passo a passo cadastrado ainda"
-            echo
-        fi
-
-        HABILITAR_DEL=1
-        HABILITAR_ADD=1
-        selecionar_menu "${OPCOES[@]}"
-        ESCOLHA=$?
-
-        if [[ $ESCOLHA -eq 255 ]]; then
-            return
-        fi
-
-        if [[ $ESCOLHA -eq 254 ]]; then
-            adicionar_passo
-            continue
-        fi
-
-        if [[ ${#OPCOES[@]} -eq 0 ]]; then
-            continue
-        fi
-
-        TITULO_SELECIONADO="${OPCOES[$ESCOLHA]}"
-
-        if [[ "$ACAO_MENU" == "DEL" ]]; then
-            echo
-            read -rp "Tem certeza que deseja EXCLUIR '${TITULO_SELECIONADO}'? [s/N]: " CONFIRMACAO
-            if [[ "$CONFIRMACAO" =~ ^[sS]$ ]]; then
-                rm -f "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
-            fi
-            continue
-        fi
-
-        clear
-        cat "${ARQUIVOS_ENCONTRADOS[$ESCOLHA]}"
-        echo
-        echo "========================================="
-        read -rp "Press ENTER para voltar à lista..."
-    done
-}
-
-# ==========================================
 # LOGS
 # ==========================================
 
@@ -2363,6 +2241,25 @@ exibir_log_journalctl() {
     fi
 }
 
+exibir_log_scripts() {
+    local CAMINHO=$1 LINHAS
+
+    if [[ ! -f "$CAMINHO" ]]; then
+        echo
+        echo "[ ERRO ] Log não encontrado em: $CAMINHO"
+        echo
+        echo "Confirme se o caminho está correto"
+        echo
+        read -rp "Press ENTER"
+        return
+    fi
+
+    clear
+    cat "$CAMINHO"
+    echo
+    read -rp "Press ENTER"
+}
+
 menu_script() {
     local NOME_EXIBICAO="$1" CAMINHO_LOG="$2" CAMINHO_SCRIPT="$3" OPCOES
     while true; do
@@ -2383,7 +2280,7 @@ menu_script() {
         fi
 
         case $ESCOLHA in
-            0) exibir_log_arquivo "$CAMINHO_LOG" ;;
+            0) exibir_log_scripts "$CAMINHO_LOG" ;;
             1)
                 clear
                 (sudo "$CAMINHO_SCRIPT")
@@ -2979,7 +2876,6 @@ while true; do
         "Diagnósticos"
         "Cheat Sheet"
         "IPs"
-        "Instruções"
         "Logs"
         "Feedback"
         "Dashboard"
@@ -3002,9 +2898,8 @@ while true; do
         5) menu_diagnosticos ;;
         6) menu_cheatsheet ;;
         7) menu_ips ;;
-        8) listar_passos ;;
-        9) menu_logs ;;
-        10) menu_feedback ;;
-        11) dashboard ;;
+        8) menu_logs ;;
+        9) menu_feedback ;;
+        10) dashboard ;;
     esac
 done
