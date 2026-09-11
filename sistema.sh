@@ -59,7 +59,8 @@ verificar_estrutura() {
     if ! grep -q "^${USUARIO}=" "$ARQ_USUARIOS" 2>/dev/null; then
         echo "${USUARIO}=user" >> "$ARQ_USUARIOS"
     fi
-} 
+}
+
 # ==========================================
 # SENHAS
 # ==========================================
@@ -190,10 +191,11 @@ selecionar_menu() {
         fi
 
         for i in "${!OPCOES[@]}"; do
+            local cor_opcao="${CORES_MENU[$i]:-}"
             if [[ $i -eq $SELECIONADO ]]; then
                 echo -e "${COR_DESTAQUE} 🐧 ${OPCOES[$i]} ${RESET}"
             else
-                echo "  ${OPCOES[$i]}"
+                echo -e "  ${cor_opcao}${OPCOES[$i]}${RESET}"
             fi
         done
 
@@ -257,7 +259,8 @@ selecionar_menu() {
     HABILITAR_DEL=0
     HABILITAR_ADD=0
     MENSAGEM_MENU=""
-
+    CORES_MENU=()
+    
     return "$RETORNO"
 }
 
@@ -279,7 +282,7 @@ criar_registro() {
             echo "DATA: $DATA"
             echo "USUARIO: $USUARIO"
             echo "INICIO: $HORA"
-
+            echo
             echo "========================================"
         } > "$ARQUIVO"
     fi
@@ -673,11 +676,17 @@ listar_artigos() {
         done < <(sort -n "$ARQ_ARTIGOS")
 
         HABILITAR_DEL=1
+        HABILITAR_ADD=1
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
         if [[ $ESCOLHA -eq 255 ]]; then
             return
+        fi
+
+        if [[ $ESCOLHA -eq 254 ]]; then
+            adicionar_artigo
+            continue
         fi
 
         local ID_SELECIONADO="${IDS[$ESCOLHA]}"
@@ -769,7 +778,6 @@ menu_artigos() {
     while true; do
         clear
         local OPCOES=(
-            "Adicionar artigo"
             "Listar artigos"
             "Buscar artigo"
         )
@@ -783,9 +791,8 @@ menu_artigos() {
         fi
         
         case $OPCAO in
-            0) adicionar_artigo ;;
-            1) listar_artigos ;;
-            2) pesquisar_artigo ;;
+            0) listar_artigos ;;
+            1) pesquisar_artigo ;;
         esac
     done
 }
@@ -860,7 +867,7 @@ abrir_explicacao(){
     while true; do
         clear
         echo
-        echo "========== ABRIR EXPLICAÇÃO =========="
+        echo "========== LISTAR EXPLICAÇÕES =========="
         echo
 
         ARQUIVOS=$(find "$DIR_EXPLICACOES" -maxdepth 1 -type f -name "*.txt" | sort)
@@ -883,11 +890,17 @@ abrir_explicacao(){
         done <<< "$ARQUIVOS"
 
         HABILITAR_DEL=1
+        HABILITAR_ADD=1
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
         if [[ $ESCOLHA -eq 255 ]]; then
             return
+        fi
+
+        if [[ $ESCOLHA -eq 254 ]]; then
+            nova_explicacao
+            continue
         fi
 
         local TITULO_SELECIONADO="${OPCOES[$ESCOLHA]}"
@@ -973,8 +986,7 @@ menu_estudos(){
     while true; do
         clear
         local OPCOES=(
-            "Nova explicação"
-            "Abrir explicação"
+            "Listar explicações"
             "Pesquisar explicações"
 	    )
         
@@ -987,9 +999,8 @@ menu_estudos(){
         fi
 
         case $OPCAO in
-            0) nova_explicacao ;;
-            1) abrir_explicacao ;;
-            2) pesquisar_explicacao ;;
+            0) abrir_explicacao ;;
+            1) pesquisar_explicacao ;;
         esac
     done
 }
@@ -1010,7 +1021,22 @@ COR_CINZA="\e[38;5;245m"
 COR_SEL="\e[7m"     # inverte fundo/texto na linha selecionada
 RESET="\e[0m"
 
+COR_EMANUEL="\e[38;2;42;57;176;01m"
+COR_RAYSSA="\e[38;2;255;20;147;01m"
+COR_DANIELE="\e[38;2;148;0;211;01m"
+
 # --------------------- Funções auxiliares ---------------------
+
+normalizar_nfc() {
+    # normalizar_nfc "texto" -> mesmo texto, com acentos combinantes
+    # convertidos para forma pré-composta (NFC), evitando desalinhamento
+    # de tabelas causado por contagem de caracteres divergente
+    local texto="$1"
+    python3 -c "
+import sys, unicodedata
+print(unicodedata.normalize('NFC', sys.argv[1]), end='')
+" "$texto"
+}
 
 repetir() {
     # repetir <quantidade> <caractere-utf8>  (evita 'tr', que quebra multibyte)
@@ -1021,7 +1047,7 @@ repetir() {
 
 centralizar() {
     # centralizar "texto" largura
-    local LC_ALL=C.utf8
+    local LC_ALL=pt_BR.utf8
     local texto="$1" largura="$2" len esq dir
     len=${#texto}
     if (( len >= largura )); then
@@ -1036,7 +1062,7 @@ centralizar() {
 
 preencher_direita() {
     # preencher_direita "texto" largura  -> como printf "%-Ns", mas seguro p/ UTF-8
-    local LC_ALL=C.utf8
+    local LC_ALL=pt_BR.utf8
     local texto="$1" largura="$2" falta
     falta=$(( largura - ${#texto} ))
     (( falta < 0 )) && falta=0
@@ -1045,17 +1071,19 @@ preencher_direita() {
 
 truncar_esq() {
     # truncar_esq "texto" largura  -> alinhado à esquerda, com "…" se estourar
-    local LC_ALL=C.utf8
-    local texto="$1" largura="$2"
+    local LC_ALL=pt_BR.utf8
+    local texto="$1" largura="$2" falta
     if (( ${#texto} > largura )); then
         printf '%s' "${texto:0:$((largura-1))}…"
     else
-        printf '%-*s' "$largura" "$texto"
+        falta=$(( largura - ${#texto} ))
+        (( falta < 0 )) && falta=0
+        printf '%s%*s' "$texto" "$falta" ''
     fi
 }
 
 calcular_larguras() {
-    local LC_ALL=C.utf8
+    local LC_ALL=pt_BR.utf8
     local total=${#IDS[@]}
     local i TEXTO LEN
 
@@ -1086,7 +1114,7 @@ calcular_larguras() {
 
 # Lê uma tecla (trata setas, backspace e enter)
 ler_tecla() {
-    local tecla resto
+    local tecla resto til
     IFS= read -rsn1 tecla
     if [[ $tecla == $'\x1b' ]]; then
         read -rsn2 -t 0.02 resto
@@ -1095,14 +1123,16 @@ ler_tecla() {
             '[B') echo "BAIXO" ;;
             '[C') echo "DIREITA" ;;
             '[D') echo "ESQUERDA" ;;
+            '[3') 
+                read -rsn1 -t 0.02 til
+                [[ "$til" == "~" ]] && echo "DEL" || echo "ESC"
+                ;;
             *)    echo "ESC" ;;
         esac
     elif [[ $tecla == $'\x7f' || $tecla == $'\x08' ]]; then
         echo "BACKSPACE"
     elif [[ $tecla == "+" ]]; then
         echo "MAIS"
-    elif [[ $tecla == "d" || $tecla == "D" ]]; then
-        echo "DEL"
     elif [[ -z $tecla ]]; then
         echo "ENTER"
     else
@@ -1112,11 +1142,20 @@ ler_tecla() {
 
 # Dado um STATUS, define SIMBOLO e COR_STATUS globais
 status_info() {
-    case "$1" in
-        ANDAMENTO) SIMBOLO="[>]"; COR_STATUS="$COR_AMARELO" ;;
-        CONCLUIDA) SIMBOLO="[✓]"; COR_STATUS="$COR_VERDE" ;;
-        *)         SIMBOLO="[ ]"; COR_STATUS="$COR_CINZA" ;;
+    local status="$1" editor="$2"
+
+    case "$status" in
+        ANDAMENTO) SIMBOLO="[>]" ;;
+        CONCLUIDA) SIMBOLO="[✓]" ;;
+        *)         SIMBOLO="[ ]" ;;
     esac
+    case "$editor" in
+        pn4711) COR_STATUS="$COR_EMANUEL" ;;
+        pn4730) COR_STATUS="$COR_RAYSSA" ;;
+        daniele) COR_STATUS="$COR_DANIELE" ;;
+        *) COR_STATUS="$COR_CINZA" ;;
+    esac
+
 }
 
 proximo_status() {
@@ -1163,15 +1202,14 @@ desenhar_tabela() {
         "$(centralizar "PRAZO" "$LARG_PRAZO")"
     echo "$MEIO"
 
-    local i ID STATUS PRIOR DESC PRAZO PONTEIRO col_st texto_tarefa texto_prior texto_prazo cor_prior
+    local i ID STATUS PRIOR DESC PRAZO EDITOR PONTEIRO col_st texto_tarefa texto_prior texto_prazo cor_prior
     for (( i=0; i<total; i++ )); do
         ID="${IDS[$i]}"; STATUS="${STATUS_LIST[$i]}"; PRIOR="${PRIORIDADE_LIST[$i]}"
-        DESC="${DESCRICOES[$i]}"; PRAZO="${PRAZO_LIST[$i]}"
+        DESC="${DESCRICOES[$i]}"; PRAZO="${PRAZO_LIST[$i]}"; EDITOR="${EDITOR_LIST[$i]}"
 
-        status_info "$STATUS"
+        status_info "$STATUS" "$EDITOR"
         [[ $i -eq $SEL ]] && PONTEIRO="❯" || PONTEIRO=" "
         col_st=$(preencher_direita "$PONTEIRO $SIMBOLO" 6)
-
         texto_tarefa=$(truncar_esq "$(printf '#%02d %s' "$ID" "$DESC")" "$LARG_TAREFA")
         texto_prior=$(centralizar "$PRIOR" "$LARG_PRIORIDADE")
 
@@ -1188,7 +1226,6 @@ desenhar_tabela() {
             *)     cor_prior="$RESET" ;;
         esac
 
-        # ALTERADO: removidos os 3 espaços extras da linha selecionada + padding simétrico igual nas duas variantes
         if (( i == SEL )); then
             echo -e "│${COR_SEL}${col_st}${RESET}│ ${texto_tarefa} │${cor_prior} ${texto_prior} ${RESET}│ ${texto_prazo} │"
         else
@@ -1198,16 +1235,16 @@ desenhar_tabela() {
 
     echo "$BASE"
     echo
-    echo "↑ ↓ navegar   ← → status   + adicionar   d excluir   BACKSPACE voltar"
+    echo "↑ ↓ navegar   ← → status   + adicionar   DEL excluir   BACKSPACE voltar"
 }
 
 # --------------------- Carregamento dos dados ---------------------
 
 carregar_tarefas() {
-    IDS=(); STATUS_LIST=(); PRIORIDADE_LIST=(); DESCRICOES=(); PRAZO_LIST=()
+    IDS=(); STATUS_LIST=(); PRIORIDADE_LIST=(); DESCRICOES=(); PRAZO_LIST=(); EDITOR_LIST=()
     [[ -s "$ARQ_AFAZERES" ]] || return
-    local ID STATUS PRIORIDADE DESC PRAZO
-    while IFS="|" read -r ID STATUS PRIORIDADE DESC PRAZO || [[ -n "$ID" ]]; do
+    local ID STATUS PRIORIDADE DESC PRAZO EDITOR
+    while IFS="|" read -r ID STATUS PRIORIDADE DESC PRAZO EDITOR || [[ -n "$ID" ]]; do
         ID=$(echo "$ID" | tr -d '\r')
         [[ -z "$ID" ]] && continue
         IDS+=("$ID")
@@ -1215,6 +1252,7 @@ carregar_tarefas() {
         PRIORIDADE_LIST+=("$(echo "$PRIORIDADE" | tr -d '\r')")
         DESCRICOES+=("$(echo "$DESC" | tr -d '\r')")
         PRAZO_LIST+=("$(echo "$PRAZO" | tr -d '\r')")
+        EDITOR_LIST+=("$(echo "$EDITOR" | tr -d '\r')")
     done < "$ARQ_AFAZERES"
 }
 
@@ -1222,7 +1260,8 @@ salvar_status() {
     # salvar_status <id> <novo_status>
     local id="$1" novo="$2" tmp
     tmp=$(mktemp)
-    awk -F'|' -v id="$id" -v status="$novo" 'BEGIN{OFS="|"} { if ($1==id) $2=status; print }' \
+    awk -F'|' -v id="$id" -v status="$novo" -v editor="$USUARIO" \
+        'BEGIN{OFS="|"} { if ($1==id) { $2=status; $6=editor }; print }' \
         "$ARQ_AFAZERES" > "$tmp"
     mv "$tmp" "$ARQ_AFAZERES"
 }
@@ -1237,7 +1276,7 @@ excluir_tarefa() {
 # --------------------- Tela principal (substitui ls_tarefas) ---------------------
 
 ls_tarefas() {
-    local IDS STATUS_LIST PRIORIDADE_LIST DESCRICOES PRAZO_LIST SEL=0 tecla total
+    local IDS STATUS_LIST PRIORIDADE_LIST DESCRICOES PRAZO_LIST EDITOR_LIST SEL=0 tecla total
 
     while true; do
         carregar_tarefas
@@ -1310,14 +1349,18 @@ add_tarefa() {
         return
     fi
 
+    DESCRICAO=$(normalizar_nfc "$DESCRICAO")
     OPCOES_PRIORIDADE=("Alta" "Média" "Baixa")
+    CORES_MENU=("$COR_VERMELHO" "$COR_AMARELO" "$COR_AZUL")
+    MENSAGEM_MENU="========================================\n Escolha a prioridade:\n========================================\n"
     selecionar_menu "${OPCOES_PRIORIDADE[@]}"
     case $? in
         0) PRIORIDADE="ALTA" ;;
         1) PRIORIDADE="MEDIA" ;;
         2) PRIORIDADE="BAIXA" ;;
     esac
-
+    echo
+    echo "========================================"
     read -e -rp "Prazo (ex: Hoje, Amanhã, 20/09 — ENTER para nenhum): " PRAZO
 
     if [[ ! -s "$ARQ_AFAZERES" ]]; then
@@ -1327,26 +1370,13 @@ add_tarefa() {
         ID=$((ID + 1))
     fi
 
-    echo "$ID|ABERTA|$PRIORIDADE|$DESCRICAO|$PRAZO" >> "$ARQ_AFAZERES"
+    echo "$ID|ABERTA|$PRIORIDADE|$DESCRICAO|$PRAZO|" >> "$ARQ_AFAZERES"
 
     echo; echo "Tarefa adicionada com sucesso!"; echo
     read -rp "Press ENTER  "
 }
 
 # --------------------- Menu de tarefas (inalterado) ---------------------
-
-menu_tarefas() {
-    while true; do
-        local OPCOES=("Adicionar tarefa" "Listar tarefas")
-        selecionar_menu "${OPCOES[@]}"
-        local OPCAO=$?
-        [[ $OPCAO -eq 255 ]] && return
-        case "$OPCAO" in
-            0) add_tarefa ;;
-            1) ls_tarefas ;;
-        esac
-    done
-}
 
 # ==========================================
 # DIAGNÓSTICOS
@@ -1463,7 +1493,7 @@ abrir_diagnostico(){
     while true; do
         clear
         echo "==================================="
-        echo "         ABRIR DIAGNÓSTICO"
+        echo "         LISTAR DIAGNÓSTICOS"
         echo "==================================="
 
         if [[ ! -s "$ARQ_DIAGNOSTICOS" ]]; then
@@ -1494,6 +1524,7 @@ abrir_diagnostico(){
         done < "$ARQ_DIAGNOSTICOS"
 
         HABILITAR_DEL=1
+        HABILITAR_ADD=1
         selecionar_menu "${OPCOES[@]}"
         local ESCOLHA=$?
 
@@ -1501,6 +1532,11 @@ abrir_diagnostico(){
             return
         fi
         
+        if [[ $ESCOLHA -eq 254 ]]; then
+            add_diagnostico
+            continue
+        fi
+
         local TITULO_SELECIONADO="${TITULOS_ARR[$ESCOLHA]}"
 
         if [[ "$ACAO_MENU" == "DEL" ]]; then
@@ -1553,7 +1589,6 @@ menu_diagnosticos(){
         clear
         
         local OPCOES=(
-            "Adicionar diagnóstico"
             "Abrir diagnóstico"
             "Listar diagnósticos"
         )
@@ -1567,9 +1602,8 @@ menu_diagnosticos(){
         fi
 
         case $OPCAO in
-            0) add_diagnostico ;;
-            1) abrir_diagnostico ;;
-            2) ls_diagnostico ;;
+            0) abrir_diagnostico ;;
+            1) ls_diagnostico ;;
         esac
     done
 }
@@ -1579,25 +1613,11 @@ menu_diagnosticos(){
 # ==========================================
 
 adicionar_comando() {
+    local SECAO="$1" ROTULO="$2"
     clear
     echo
-    echo "========== ADICIONAR COMANDO =========="
+    echo "========== ADICIONAR COMANDO - $ROTULO =========="
     echo
-
-    local OPCOES_SECAO=("Auditoria/Segurança" "Redes" "Diagnósticos")
-    selecionar_menu "${OPCOES_SECAO[@]}"
-    local ESCOLHA_SECAO=$?
-
-    if [[ $ESCOLHA_SECAO -eq 255 ]]; then
-        return
-    fi
-
-    local SECAO
-    case $ESCOLHA_SECAO in
-        0) SECAO="AUDITORIA" ;;
-        1) SECAO="REDES" ;;
-        2) SECAO="DIAGNOSTICOS" ;;
-    esac
 
     local COMANDO DESCRICAO ID
 
@@ -1653,16 +1673,20 @@ listar_comandos_secao() {
         if [[ ${#OPCOES[@]} -eq 0 ]]; then
             echo "Nenhum comando cadastrado nesta seção"
             echo
-            read -rp "Press ENTER "
-            return
         fi
 
         HABILITAR_DEL=1
+        HABILITAR_ADD=1
         selecionar_menu "${OPCOES[@]}"
         ESCOLHA=$?
 
         if [[ $ESCOLHA -eq 255 ]]; then
             return
+        fi
+
+        if [[ $ESCOLHA -eq 254 ]]; then
+            adicionar_comando "$SECAO" "$ROTULO"
+            continue
         fi
 
         ID_SELECIONADO="${IDS[$ESCOLHA]}"
@@ -1700,7 +1724,6 @@ menu_cheatsheet() {
     while true; do
         clear
         local OPCOES=(
-            "Adicionar comando"
             "Auditoria/Segurança"
             "Redes"
             "Diagnósticos"
@@ -1714,10 +1737,9 @@ menu_cheatsheet() {
         fi
 
         case $OPCAO in
-            0) adicionar_comando ;;
-            1) listar_comandos_secao "AUDITORIA" "AUDITORIA/SEGURANÇA" ;;
-            2) listar_comandos_secao "REDES" "REDES" ;;
-            3) listar_comandos_secao "DIAGNOSTICOS" "DIAGNÓSTICOS" ;;
+            0) listar_comandos_secao "AUDITORIA" "AUDITORIA/SEGURANÇA" ;;
+            1) listar_comandos_secao "REDES" "REDES" ;;
+            2) listar_comandos_secao "DIAGNOSTICOS" "DIAGNÓSTICOS" ;;
         esac
     done
 }
@@ -1949,7 +1971,7 @@ listar_conexoes_samba() {
         DATA_CONEXAO=$(echo "$LINHA_SERVICO" | grep -oE '[A-Za-z]{3} [A-Za-z]{3}[[:space:]]+[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}')
         [[ -z "$DATA_CONEXAO" ]] && DATA_CONEXAO="?"
 
-        printf "%-15s %-16s %-24s" "${USUARIO:-?}" "${IP:-?}" "$DATA_CONEXAO"
+        printf "%-15s %-16s %-24s" "${USUARIO:-?}" "${IP:-?}" "$DATA_CONEXAO\n"
     done <<< "$PIDS"
 
     echo
@@ -2032,7 +2054,7 @@ escanear_vizinhos() {
 
     while IFS= read -r LINHA; do
         IP=$(awk '{print $1}' <<< "$LINHA")
-        MAC=$(grep -oE '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})' <<< "$LINHA")
+        MAC=$(grep -oE '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}' <<< "$LINHA")
 
         if [[ -z "$IP" || -z "$MAC" ]]; then continue; fi
 
@@ -2048,7 +2070,7 @@ escanear_vizinhos() {
             }
         ' "$ARQ_VIZINHOS" > "$TEMP_VIZ"
         mv "$TEMP_VIZ" "$ARQ_VIZINHOS"
-    done < <(ip -4 neigh show 2>/dev/null | grep -E 'lladr')
+    done < <(ip -4 neigh show 2>/dev/null | grep -E 'lladdr')
 }
 
 listar_vizinhos() {
@@ -2063,25 +2085,25 @@ listar_vizinhos() {
         echo "Escaneando..."
         escanear_vizinhos
 
-        OPCOES=(); MACS=(); IPS=(); NOMES=()
+        OPCOES=(); MACS=(); NOMES=(); IPS=()
 
         while IFS="|" read -r MAC NOME IP; do
             if [[ -z "$MAC" ]]; then continue; fi
             if [[ -n "$NOME" ]]; then
                 OPCOES+=("$NOME ($IP)")
             else
-                OPCOES+=("(sem nome) ($IP) - $MAC")
+                OPCOES+=("(sem nome) ($IP) — $MAC")
             fi
             MACS+=("$MAC")
-            IPS+=("$IP")
             NOMES+=("$NOME")
+            IPS+=("$IP")
         done < "$ARQ_VIZINHOS"
 
         if [[ ${#OPCOES[@]} -eq 0 ]]; then
             clear
             echo "Nenhum vizinho encontrado na rede"
             echo
-            read -rp "Press ENTER"
+            read -rp "Press ENTER "
             return
         fi
 
@@ -2097,6 +2119,29 @@ listar_vizinhos() {
         NOME_SEL="${NOMES[$ESCOLHA]}"
         IP_SEL="${IPS[$ESCOLHA]}"
 
+        if [[ "$ACAO_MENU" == "DEL" ]]; then
+            echo
+            read -rp "Tem certeza que deseja EXCLUIR este vizinho do catálogo? [s/N]: " CONFIRMACAO
+            if [[ "$CONFIRMACAO" =~ ^[sS]$ ]]; then
+                TEMP_VIZ=$(mktemp)
+                awk -F'|' -v mac="$MAC_SEL" 'tolower($1) != tolower(mac)' "$ARQ_VIZINHOS" > "$TEMP_VIZ"
+                mv "$TEMP_VIZ" "$ARQ_VIZINHOS"
+            fi
+            continue
+        fi
+
+        clear
+        echo "========== DETALHES DO VIZINHO =========="
+        echo "Nome:  ${NOME_SEL:-(sem nome)}"
+        echo "IP:    $IP_SEL"
+        echo "MAC:   $MAC_SEL"
+        echo "==========================================="
+        echo
+        read -e -i "$NOME_SEL" -rp "Nome (ENTER mantém, apagar tudo remove o nome): " NOVO_NOME
+
+        TEMP_VIZ=$(mktemp)
+        awk -F'|' -v mac="$MAC_SEL" -v nome="$NOVO_NOME" 'BEGIN{OFS="|"} { if (tolower($1)==tolower(mac)) $2=nome; print }' "$ARQ_VIZINHOS" > "$TEMP_VIZ"
+        mv "$TEMP_VIZ" "$ARQ_VIZINHOS"
     done
 }
 
@@ -2367,8 +2412,8 @@ menu_scripts() {
 
         case $ESCOLHA in
             0) menu_script "LIMPEZA" "/var/log/limpeza/limpeza-atual.log" "/scripts/auto-remove.sh" ;;
-            1) menu_script "STORAGE" "/var/log/backupsamba/COLOCAR CAMINHO CERTO" "/scripts/storage.sh" ;;
-            2) menu_script "MONITORAMENTO" "/var/log/minipc-monitoring/ultimo-monitoramento.log" "/scripts/monitoramento.sh" ;;
+            1) menu_script "STORAGE" "/var/log/backupsamba/consumo_atual.log" "/scripts/storage.sh" ;;
+            2) menu_script "MONITORAMENTO" "/var/log/minipc-monitoring/ultimo_monitoramento.log" "/scripts/monitoramento.sh" ;;
         esac
     done
 }
@@ -2540,7 +2585,8 @@ menu_logs(){
             0) menu_scripts ;;
             1) menu_samba ;;
             2) menu_fail2ban ;;
-            3) menu_gotify ;;
+            3) exibir_log_journalctl "gotify" ;;
+            #3) menu_gotify ;;
         esac
     done
 }

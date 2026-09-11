@@ -51,12 +51,13 @@ EMANUEL (09/09/2026):
 ===============================================================
 EMANUEL (10/09/2026):
     - monitoramento em tempo real (validado)
-    - 
+    - tarefas (validado) - depois de umas 2 horas tentando resolver problema de acentos/caracteres especiais
+    - tecla para remover tarefa mudada de 'd' para 'DEL'
+    - adicionada a funcionalidade de cores por usuario no status da tarefa (validado)
+    - falta apenas ip para "embutir" a funcionalidade de adicionar dentro de listar (resto validado)
+    - preciso colocar uma confirmação se o usuario nao colocar descrição em um comando no meun cheat sheet, pois do jeito q ta perde tudo ao deixar vazia   
 
-===============================================================
-
-\e[38;2;255;20;147m rosa choque cor da Rayssa
-
+=============================================================== 
 
 validado = testado e funcionando
 testando = em processo de testes

@@ -1,8 +1,12 @@
-registros/
-explicacoes/
-artigos/
-diagnosticos/
 afazeres/
+artigos/
+cheat-sheet/
+diagnosticos/
+explicacoes/
 feedback/
+instrucoes/
+ips/
+registros/
+.cofre.enc
 *.tmp
 *.log

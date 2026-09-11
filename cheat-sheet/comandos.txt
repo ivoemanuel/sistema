@@ -1,2 +1,5 @@
 1|REDES|ip -br a|Exibe o ip de forma simplificada
 2|AUDITORIA|sudo tail -n 50 /var/log/auth.log|Mostra as últimas 50 linhas do log de autenticação
+3|AUDITORIA|echo "comando adicionado com +"|comando adicionado com +
+4|REDES|echo "+redes"|+redes
+5|DIAGNOSTICOS|echo "+diagnosticos"|+diagnosticos
