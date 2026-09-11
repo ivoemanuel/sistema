@@ -1,7 +1,51 @@
 #!/bin/bash
+
+set -o pipefail
+
 # ==========================================
 # CONFIGURAÇÕES
 # ==========================================
+
+diminuir_repeticao_teclado() {
+    AMBIENTE_EXECUCAO="$XDG_SESSION_TYPE"
+    if [[ "$AMBIENTE_EXECUCAO" == "tty" ]]; then
+        if ! command -v setterm >/dev/null 2>&1; then
+            sudo apt install -y setterm >/dev/null 2>&1
+        fi
+        sudo kbdrate -d 250 -r 0.25
+    fi
+
+    if [[ "$AMBIENTE_EXECUCAO" == "x11" ]]; then
+        if ! command -v xset >/dev/null 2>&1; then
+            sudo apt install -y xset >/dev/null 2>&1
+        fi
+        xset r rate 250 0.25
+    fi
+
+    if [[ "$AMBIENTE_EXECUCAO" == "wayland" ]]; then
+        if ! command -v gsettings >/dev/null 2>&1; then
+            sudo apt install -y gsettings >/dev/null 2>&1
+        fi
+        gsettings set org.gnome.desktop.peripherals.keyboard repeat-interval 250
+    fi
+}
+
+resetar_repeticao_teclado() {
+    if [[ "$AMBIENTE_EXECUCAO" == "tty" ]]; then
+        sudo kbdrate -d 250 -r 11.0
+    fi
+
+    if [[ "$AMBIENTE_EXECUCAO" == "x11" ]]; then
+        xset r rate 500 33
+    fi
+
+    if [[ "$AMBIENTE_EXECUCAO" == "wayland" ]]; then
+        gsettings reset org.gnome.desktop.peripherals.keyboard delay
+        gsettings reset org.gnome.desktop.peripherals.keyboard repeat-interval
+    fi
+}
+
+diminuir_repeticao_teclado
 
 RAIZ="/opt/sistema"
 
@@ -13,7 +57,6 @@ DIR_AFAZERES="$RAIZ/afazeres"
 DIR_FEEDBACK="$RAIZ/feedback"
 DIR_CHEATSHEET="$RAIZ/cheat-sheet"
 DIR_IPS="$RAIZ/ips"
-DIR_INSTRUCOES="$RAIZ/instrucoes"
 
 ARQ_ARTIGOS="$DIR_ARTIGOS/artigos.txt"
 ARQ_DIAGNOSTICOS="$DIR_DIAGNOSTICOS/diagnosticos.txt"
@@ -47,7 +90,6 @@ verificar_estrutura() {
     mkdir -p "$DIR_FEEDBACK"
     mkdir -p "$DIR_CHEATSHEET"
     mkdir -p "$DIR_IPS"
-    mkdir -p "$DIR_INSTRUCOES"
     # Arquivos
     touch "$ARQ_ARTIGOS"
     touch "$ARQ_AFAZERES"
@@ -58,6 +100,12 @@ verificar_estrutura() {
     # add $USUARIO=user em usuarios.txt para o feedback ficar com o nome da pessoa, para isso teremos que mudar 'user' para o nome que queremos que apareça
     if ! grep -q "^${USUARIO}=" "$ARQ_USUARIOS" 2>/dev/null; then
         echo "${USUARIO}=user" >> "$ARQ_USUARIOS"
+    fi
+}
+
+fixar_permissoes() {
+    if [[ -n "${RAIZ:-}" && -d "$RAIZ" ]]; then
+        sudo find "$RAIZ" -mindepth 2 -type f -exec chgrp seguranca {} + -exec chmod 660 {} +
     fi
 }
 
@@ -658,8 +706,6 @@ listar_artigos() {
 
         if [[ ! -s "$ARQ_ARTIGOS" ]]; then
             echo "Nenhum artigo cadastrado."
-            sleep 2
-            return
         fi
 
         OPCOES=()
@@ -1150,8 +1196,8 @@ status_info() {
         *)         SIMBOLO="[ ]" ;;
     esac
     case "$editor" in
-        pn4711) COR_STATUS="$COR_EMANUEL" ;;
-        pn4730) COR_STATUS="$COR_RAYSSA" ;;
+        emanuel) COR_STATUS="$COR_EMANUEL" ;;
+        rayssa) COR_STATUS="$COR_RAYSSA" ;;
         daniele) COR_STATUS="$COR_DANIELE" ;;
         *) COR_STATUS="$COR_CINZA" ;;
     esac
@@ -1375,8 +1421,6 @@ add_tarefa() {
     echo; echo "Tarefa adicionada com sucesso!"; echo
     read -rp "Press ENTER  "
 }
-
-# --------------------- Menu de tarefas (inalterado) ---------------------
 
 # ==========================================
 # DIAGNÓSTICOS
@@ -1964,7 +2008,7 @@ listar_conexoes_samba() {
         return
     fi
 
-    printf "%-15s %-16s %-24s" "USUÁRIO" "        IP" " CONECTADO EM"
+    printf "%-15s %-16s %-24s\n" "USUÁRIO" "        IP" " CONECTADO EM"
     echo "-------------------------------------------------"
 
     while IFS= read -r PID; do
@@ -1977,7 +2021,7 @@ listar_conexoes_samba() {
         DATA_CONEXAO=$(echo "$LINHA_SERVICO" | grep -oE '[A-Za-z]{3} [A-Za-z]{3}[[:space:]]+[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4}')
         [[ -z "$DATA_CONEXAO" ]] && DATA_CONEXAO="?"
 
-        printf "%-15s %-16s %-24s" "${USUARIO:-?}" "${IP:-?}" "$DATA_CONEXAO\n"
+        printf "%-15s %-16s %-24s\n" "${USUARIO:-?}" "${IP:-?}" "$DATA_CONEXAO"
     done <<< "$PIDS"
 
     echo
@@ -2864,6 +2908,7 @@ dashboard() {
 
 verificar_estrutura
 criar_registro
+fixar_permissoes
 
 while true; do
 
@@ -2885,7 +2930,7 @@ while true; do
     OPCAO=$?
 
     if [[ $OPCAO -eq 255 ]]; then
-        clear; break
+        resetar_repeticao_teclado; clear; break
     fi
 
 
